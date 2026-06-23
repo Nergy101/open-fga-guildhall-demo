@@ -198,7 +198,7 @@ export const RESOURCES: Resource[] = [
         key: "tactics",
         label: "View tactics",
         relation: "can_view_tactics",
-        concept: "attendee OR leader",
+        concept: "attendee or leader, but not banned",
       },
       {
         key: "edit",
@@ -240,7 +240,7 @@ export const RESOURCES: Resource[] = [
         key: "tactics",
         label: "View tactics",
         relation: "can_view_tactics",
-        concept: "attendee OR leader",
+        concept: "attendee or leader, but not banned",
       },
       {
         key: "edit",
@@ -424,7 +424,7 @@ export const RESOURCES: Resource[] = [
     object: "raid:onyxia",
     type: "raid",
     blurb:
-      "Shared with the alliance: everyone attended, but banned Gul'dan is denied while allied Medivh joins via the pact.",
+      "Shared with the alliance: everyone attended, but banned Gul'dan is denied — while allied Medivh both joins and rolls loot as a raider of an allied guild.",
     actions: [
       {
         key: "view",
@@ -443,13 +443,13 @@ export const RESOURCES: Resource[] = [
         key: "loot",
         label: "Roll on loot",
         relation: "can_loot",
-        concept: "intersection: attendee AND raider",
+        concept: "attendee AND raider (own OR allied guild)",
       },
       {
         key: "tactics",
         label: "View tactics",
         relation: "can_view_tactics",
-        concept: "attendee OR leader",
+        concept: "attendee or leader, but not banned",
       },
       {
         key: "edit",

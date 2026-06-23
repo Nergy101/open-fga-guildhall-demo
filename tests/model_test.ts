@@ -123,8 +123,8 @@ const MATRIX: [
     T,
     F,
   ]],
-  ["raid:onyxia", "can_loot", undefined, [T, T, T, F, F, F, F]],
-  ["raid:onyxia", "can_view_tactics", undefined, [T, T, T, T, T, T, F]],
+  ["raid:onyxia", "can_loot", undefined, [T, T, T, F, F, T, F]],
+  ["raid:onyxia", "can_view_tactics", undefined, [T, T, T, T, F, T, F]],
 ];
 
 Deno.test("access matrix matches the design for every persona", async (t) => {

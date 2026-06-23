@@ -11,6 +11,9 @@ type alliance
   relations
     define guild: [guild]
     define member: member from guild
+    # Raiders of *any* guild in the alliance — lets allied raiders roll loot on
+    # shared raids (nested tuple-to-userset: alliance -> guild -> guild#raider).
+    define raider: raider from guild
 
 # ── Guild ────────────────────────────────────────────────────────────────────
 # RANK LADDER via CONCENTRIC relations (each rank inherits the one above it),
@@ -67,15 +70,22 @@ type raid
     define alliance: [alliance]
     define leader: [user] or officer from guild
     define attendee: [user]
+    # The owning guild's blocklist, surfaced on the raid so it can be excluded.
+    define banned: banned from guild
     # Own guild's members, plus allied guilds' members when the raid is shared.
     define can_view: member from guild or member from alliance
     define can_edit: leader
     # Members (recruits included) may sign up, but only while the window is open.
     # Allied-guild members may sign up to shared raids on the same terms.
     define can_signup: [guild#member with within_signup_window, alliance#member with within_signup_window]
-    # Loot rolls: you must have attended AND be a raider.
-    define can_loot: attendee and raider from guild
-    define can_view_tactics: attendee or leader
+    # Loot rolls: you must have attended AND be a raider — of the owning guild or,
+    # for alliance-shared raids, of any allied guild.
+    define eligible_looter: raider from guild or raider from alliance
+    define can_loot: attendee and eligible_looter
+    # Attendees and leaders see tactics — but a banned member never does, even
+    # one who showed up.
+    define participant: attendee or leader
+    define can_view_tactics: participant but not banned
 
 # ── Channels ─────────────────────────────────────────────────────────────────
 # PUBLIC ACCESS (user:*) for the tavern board, and per-channel GROUPS for the
