@@ -120,7 +120,7 @@ export const RESOURCES: Resource[] = [
       },
       {
         key: "withdraw",
-        label: "Withdraw from tab",
+        label: "Withdraw 250g from tab",
         relation: "can_withdraw",
         concept: "ABAC inherited from vault",
         abac: "withdraw",
