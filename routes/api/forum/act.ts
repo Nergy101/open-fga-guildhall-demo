@@ -33,6 +33,44 @@ interface Body {
 }
 
 /**
+ * Asks OpenFGA for the largest amount the user may move (binary-search over the
+ * ABAC limit) so a denial can name the actual cap instead of a generic "no".
+ * Returns 0 when there is no grant at all.
+ */
+async function maxAllowed(
+  user: string,
+  relation: string,
+  object: string,
+  ceiling: number,
+): Promise<number> {
+  if (
+    !(await check({ user, relation, object, context: { requested_amount: 1 } }))
+  ) {
+    return 0;
+  }
+  let lo = 1;
+  let hi = Math.max(1, Math.ceil(ceiling) - 1);
+  let best = 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (
+      await check({
+        user,
+        relation,
+        object,
+        context: { requested_amount: mid },
+      })
+    ) {
+      best = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return best;
+}
+
+/**
  * The one place forum mutations happen — and every one is gated by a live
  * OpenFGA Check for the logged-in user before any state changes. Hiding a
  * button in the UI is convenience; THIS is the authorization.
@@ -221,11 +259,18 @@ export const handler = define.handlers({
 
     const allowed = await check({ user, relation, object, context });
     if (!allowed) {
-      return Response.json({
-        ok: false,
-        message:
-          `🔒 Denied — OpenFGA: ${relation} on ${object} is not allowed for ${user}.`,
-      }, { status: 403 });
+      let message =
+        `🔒 Denied — OpenFGA says ${relation} on ${object} is not allowed for ${user}.`;
+      if (
+        (b.kind === "withdraw" || b.kind === "deposit") &&
+        typeof b.amount === "number"
+      ) {
+        const cap = await maxAllowed(user, relation, object, b.amount);
+        message = cap > 0
+          ? `🔒 Over the limit — ${persona.name} may ${b.kind} at most ${cap}g here (you asked for ${b.amount}g).`
+          : `🔒 ${persona.name} has no ${b.kind} access here.`;
+      }
+      return Response.json({ ok: false, message }, { status: 403 });
     }
 
     const result = run();
