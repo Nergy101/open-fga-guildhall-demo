@@ -2,7 +2,8 @@
  * Declarative seed data: every relationship tuple written to OpenFGA.
  *
  * The world: guild "Ironforge" (main) + allied guild "Orgrimmar", both part of
- * the "Azeroth Pact" alliance. One vault (with a legendary tab), two raids, and
+ * the "Azeroth Pact" alliance. Two vaults (a public bank and an officers-only
+ * war chest) with three tabs, three raids (one shared with the alliance), and
  * four channels.
  */
 
@@ -84,6 +85,22 @@ export const TUPLES: SeedTuple[] = [
     },
   },
 
+  // ── Second vault: the War Chest (officers + guildmaster only) ─────────────
+  // No member/raider withdraw grants are written here, so `can_withdraw`
+  // resolves only through the model's `officer from guild` — i.e. officers and
+  // the guildmaster. Members can still view and deposit.
+  { user: "guild:ironforge", relation: "guild", object: "vault:war_chest" },
+
+  // ── Extra vault tabs (three-level hierarchy: tab ▸ vault ▸ guild) ──────────
+  // Another tab on the main bank — inherits its gold-capped member rules.
+  {
+    user: "vault:ironforge_bank",
+    relation: "vault",
+    object: "vault_tab:materials",
+  },
+  // A tab inside the War Chest — inherits its officers-only rule.
+  { user: "vault:war_chest", relation: "vault", object: "vault_tab:treasury" },
+
   // ── Raid: Molten Core ────────────────────────────────────────────────────
   { user: "guild:ironforge", relation: "guild", object: "raid:molten_core" },
   // All Ironforge members (recruits included) may sign up — but only inside the window.
@@ -108,6 +125,31 @@ export const TUPLES: SeedTuple[] = [
   // Jaina + Arthas showed up to Blackwing Lair (Thrall did not) — so Jaina CAN loot here.
   { user: "user:jaina", relation: "attendee", object: "raid:blackwing_lair" },
   { user: "user:arthas", relation: "attendee", object: "raid:blackwing_lair" },
+
+  // ── Raid: Onyxia's Lair (shared with the whole alliance) ──────────────────
+  // Belongs to the guild AND the alliance, so allied-guild members can view and
+  // sign up too. Everyone showed up — but Gul'dan is banned (denied the
+  // member-gated access despite attending) and Medivh joins via the allied guild.
+  { user: "guild:ironforge", relation: "guild", object: "raid:onyxia" },
+  {
+    user: "alliance:azeroth_pact",
+    relation: "alliance",
+    object: "raid:onyxia",
+  },
+  // Alliance members (both guilds) may sign up while the window is open.
+  {
+    user: "alliance:azeroth_pact#member",
+    relation: "can_signup",
+    object: "raid:onyxia",
+    condition: { name: "within_signup_window", context: SIGNUP_WINDOW },
+  },
+  // The entire roster attended — including banned Gul'dan and allied Medivh.
+  { user: "user:thrall", relation: "attendee", object: "raid:onyxia" },
+  { user: "user:jaina", relation: "attendee", object: "raid:onyxia" },
+  { user: "user:arthas", relation: "attendee", object: "raid:onyxia" },
+  { user: "user:rexxar", relation: "attendee", object: "raid:onyxia" },
+  { user: "user:guldan", relation: "attendee", object: "raid:onyxia" },
+  { user: "user:medivh", relation: "attendee", object: "raid:onyxia" },
 
   // ── Channels ─────────────────────────────────────────────────────────────
   // Public tavern board — readable by everyone (user:*).

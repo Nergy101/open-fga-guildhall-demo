@@ -94,6 +94,37 @@ const MATRIX: [
   ["channel:war_council", "can_read", undefined, [T, T, F, F, F, F, F]],
   ["channel:war_council", "can_moderate", undefined, [T, T, F, F, F, F, F]],
   ["channel:pact_hall", "can_read", undefined, [T, T, T, T, F, T, F]],
+  // Second vault: the War Chest — officers + guildmaster only may withdraw
+  ["vault:war_chest", "can_view", undefined, [T, T, T, T, F, F, F]],
+  ["vault:war_chest", "can_deposit", undefined, [T, T, T, F, F, F, F]],
+  ["vault:war_chest", "can_withdraw", undefined, [T, T, F, F, F, F, F]],
+  // Extra tabs inherit their parent vault's rules
+  ["vault_tab:materials", "can_withdraw", { requested_amount: 250 }, [
+    T,
+    T,
+    T,
+    F,
+    F,
+    F,
+    F,
+  ]],
+  ["vault_tab:treasury", "can_view", undefined, [T, T, T, T, F, F, F]],
+  ["vault_tab:treasury", "can_withdraw", undefined, [T, T, F, F, F, F, F]],
+  // Alliance-shared raid: Gul'dan attended but is banned (denied); Medivh is an
+  // allied-guild member (allowed). can_view_tactics is attendance-gated, so
+  // even banned Gul'dan keeps it.
+  ["raid:onyxia", "can_view", undefined, [T, T, T, T, F, T, F]],
+  ["raid:onyxia", "can_signup", { current_time: DURING }, [
+    T,
+    T,
+    T,
+    T,
+    F,
+    T,
+    F,
+  ]],
+  ["raid:onyxia", "can_loot", undefined, [T, T, T, F, F, F, F]],
+  ["raid:onyxia", "can_view_tactics", undefined, [T, T, T, T, T, T, F]],
 ];
 
 Deno.test("access matrix matches the design for every persona", async (t) => {
@@ -319,7 +350,7 @@ Deno.test("ListObjects returns the right channels per persona", async () => {
 });
 
 Deno.test("batchCheck chunks >50 checks correctly", async () => {
-  // 7 personas x 29 actions = 203 checks, well over the 50/request cap.
+  // 7 personas x 36 actions = 252 checks, well over the 50/request cap.
   const items = PERSONAS.flatMap((p) =>
     buildItems(p, personaUser(p), { currentTime: DURING })
   );

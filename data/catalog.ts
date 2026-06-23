@@ -21,9 +21,47 @@ export interface Resource {
   /** OpenFGA object id, e.g. "guild:ironforge". */
   object: string;
   type: string;
+  /** For vault tabs: the parent vault's object id. */
+  parent?: string;
   blurb: string;
   actions: Action[];
 }
+
+export interface ResourceGroup {
+  key: string;
+  title: string;
+  subtitle: string;
+  /** Resource `type`s that belong to this section. */
+  types: string[];
+}
+
+/** Dashboard card sections, in display order. */
+export const GROUPS: ResourceGroup[] = [
+  {
+    key: "guild",
+    title: "The Guild",
+    subtitle: "Rank ladder & blocklist",
+    types: ["guild"],
+  },
+  {
+    key: "bank",
+    title: "Guild Bank",
+    subtitle: "Vaults & tabs — parent ▸ child hierarchy + ABAC gold caps",
+    types: ["vault", "vault_tab"],
+  },
+  {
+    key: "raids",
+    title: "Guild Raids",
+    subtitle: "Attendance-based, some shared with the alliance",
+    types: ["raid"],
+  },
+  {
+    key: "channels",
+    title: "Channels",
+    subtitle: "Groups, nested groups & public access",
+    types: ["channel"],
+  },
+];
 
 export const RESOURCES: Resource[] = [
   {
@@ -109,6 +147,7 @@ export const RESOURCES: Resource[] = [
     emoji: "💎",
     object: "vault_tab:legendary",
     type: "vault_tab",
+    parent: "vault:ironforge_bank",
     blurb:
       "Three-level hierarchy: tab ▸ vault ▸ guild. Inherits the vault's rules.",
     actions: [
@@ -297,6 +336,126 @@ export const RESOURCES: Resource[] = [
         label: "Read",
         relation: "can_read",
         concept: "nested group: alliance#member",
+      },
+    ],
+  },
+  {
+    key: "warchest",
+    name: "Vault: War Chest",
+    emoji: "⚜️",
+    object: "vault:war_chest",
+    type: "vault",
+    blurb:
+      "Officers' reserve: members may view and deposit, but only officers and the guildmaster can withdraw.",
+    actions: [
+      {
+        key: "view",
+        label: "View war chest",
+        relation: "can_view",
+        concept: "parent: member of guild",
+      },
+      {
+        key: "deposit",
+        label: "Deposit gold",
+        relation: "can_deposit",
+        concept: "parent: raider of guild",
+      },
+      {
+        key: "withdraw",
+        label: "Withdraw gold",
+        relation: "can_withdraw",
+        concept: "officers + guildmaster only",
+      },
+    ],
+  },
+  {
+    key: "materials",
+    name: "Vault tab: Materials",
+    emoji: "🧪",
+    object: "vault_tab:materials",
+    type: "vault_tab",
+    parent: "vault:ironforge_bank",
+    blurb:
+      "A second tab on the main bank — inherits the gold-capped member rules.",
+    actions: [
+      {
+        key: "view",
+        label: "View tab",
+        relation: "can_view",
+        concept: "inherited via tab ▸ vault ▸ guild",
+      },
+      {
+        key: "withdraw",
+        label: "Withdraw 250g from tab",
+        relation: "can_withdraw",
+        concept: "ABAC inherited from vault",
+        abac: "withdraw",
+      },
+    ],
+  },
+  {
+    key: "treasury",
+    name: "Vault tab: Treasury",
+    emoji: "💰",
+    object: "vault_tab:treasury",
+    type: "vault_tab",
+    parent: "vault:war_chest",
+    blurb:
+      "A tab inside the War Chest — inherits its officers-only withdrawal rule.",
+    actions: [
+      {
+        key: "view",
+        label: "View tab",
+        relation: "can_view",
+        concept: "inherited via tab ▸ vault ▸ guild",
+      },
+      {
+        key: "withdraw",
+        label: "Withdraw from tab",
+        relation: "can_withdraw",
+        concept: "officers + guildmaster (inherited)",
+      },
+    ],
+  },
+  {
+    key: "onyxia",
+    name: "Raid: Onyxia's Lair",
+    emoji: "🐲",
+    object: "raid:onyxia",
+    type: "raid",
+    blurb:
+      "Shared with the alliance: everyone attended, but banned Gul'dan is denied while allied Medivh joins via the pact.",
+    actions: [
+      {
+        key: "view",
+        label: "View raid",
+        relation: "can_view",
+        concept: "member of guild OR allied guild",
+      },
+      {
+        key: "signup",
+        label: "Sign up",
+        relation: "can_signup",
+        concept: "ABAC: guild or alliance members, while window open",
+        abac: "signup",
+      },
+      {
+        key: "loot",
+        label: "Roll on loot",
+        relation: "can_loot",
+        concept: "intersection: attendee AND raider",
+      },
+      {
+        key: "tactics",
+        label: "View tactics",
+        relation: "can_view_tactics",
+        concept: "attendee OR leader",
+      },
+      {
+        key: "edit",
+        label: "Edit raid",
+        relation: "can_edit",
+        concept: "leader (officer+)",
       },
     ],
   },

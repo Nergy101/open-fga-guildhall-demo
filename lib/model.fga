@@ -59,16 +59,20 @@ type vault_tab
 
 # ── Raid ─────────────────────────────────────────────────────────────────────
 # A time-boxed signup (USERSET + CONDITION) and loot rolls that require
-# BOTH attendance AND raider rank (INTERSECTION).
+# BOTH attendance AND raider rank (INTERSECTION). A raid may optionally belong
+# to an ALLIANCE, letting members of *any* allied guild view and sign up too.
 type raid
   relations
     define guild: [guild]
+    define alliance: [alliance]
     define leader: [user] or officer from guild
     define attendee: [user]
-    define can_view: member from guild
+    # Own guild's members, plus allied guilds' members when the raid is shared.
+    define can_view: member from guild or member from alliance
     define can_edit: leader
     # Members (recruits included) may sign up, but only while the window is open.
-    define can_signup: [guild#member with within_signup_window]
+    # Allied-guild members may sign up to shared raids on the same terms.
+    define can_signup: [guild#member with within_signup_window, alliance#member with within_signup_window]
     # Loot rolls: you must have attended AND be a raider.
     define can_loot: attendee and raider from guild
     define can_view_tactics: attendee or leader

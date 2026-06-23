@@ -63,22 +63,23 @@ export interface BatchItem extends CheckInput {
 
 /** OpenFGA caps BatchCheck at 50 checks per request. */
 const MAX_BATCH = 50;
+/** Re-issue checks the server left unanswered (missing/errored) this many times. */
+const MAX_BATCH_ATTEMPTS = 3;
 
-/** Many checks, chunked into ≤50-per-request batches run in parallel. Returns { [id]: allowed }. */
-export async function batchCheck(
+type BatchResultEntry = { allowed?: boolean; error?: unknown };
+
+/** One BatchCheck pass: chunk ≤50, run in parallel, merge by correlation id. */
+async function batchCheckPass(
   items: BatchItem[],
-): Promise<Record<string, boolean>> {
-  if (items.length === 0) return {};
-  const cfg = await loadFgaConfig();
-
+  cfg: FgaConfig,
+): Promise<Record<string, BatchResultEntry>> {
   const chunks: BatchItem[][] = [];
   for (let i = 0; i < items.length; i += MAX_BATCH) {
     chunks.push(items.slice(i, i + MAX_BATCH));
   }
-
   const responses = await Promise.all(
     chunks.map((chunk) =>
-      api<{ result?: Record<string, { allowed?: boolean }> }>(
+      api<{ result?: Record<string, BatchResultEntry> }>(
         "/batch-check",
         {
           authorization_model_id: cfg.modelId,
@@ -99,13 +100,46 @@ export async function batchCheck(
       )
     ),
   );
+  const merged: Record<string, BatchResultEntry> = {};
+  for (const json of responses) {
+    for (const [id, r] of Object.entries(json.result ?? {})) merged[id] = r;
+  }
+  return merged;
+}
+
+/**
+ * Many checks, chunked into ≤50-per-request batches run in parallel. Returns
+ * { [id]: allowed }. An id counts as answered only when the server returns an
+ * `allowed` boolean with no error; missing/errored ids (which happen under
+ * concurrent load) are retried so a transient gap never masquerades as a denial.
+ */
+export async function batchCheck(
+  items: BatchItem[],
+): Promise<Record<string, boolean>> {
+  if (items.length === 0) return {};
+  const cfg = await loadFgaConfig();
 
   const out: Record<string, boolean> = {};
-  for (const json of responses) {
-    const result = json.result ?? {};
-    for (const [id, r] of Object.entries(result)) out[id] = r?.allowed === true;
+  let pending = items;
+  for (
+    let attempt = 0;
+    attempt < MAX_BATCH_ATTEMPTS && pending.length > 0;
+    attempt++
+  ) {
+    const merged = await batchCheckPass(pending, cfg);
+    const stillPending: BatchItem[] = [];
+    for (const it of pending) {
+      const r = merged[it.id];
+      if (r && r.error === undefined && typeof r.allowed === "boolean") {
+        out[it.id] = r.allowed;
+      } else {
+        stillPending.push(it);
+      }
+    }
+    pending = stillPending;
   }
-  for (const it of items) out[it.id] ??= false;
+  // Still unanswered after every retry: surface as denied (last resort).
+  for (const it of pending) out[it.id] ??= false;
   return out;
 }
 

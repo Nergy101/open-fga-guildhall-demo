@@ -15,29 +15,31 @@ OpenFGA server**.
 The authorization model (`lib/model.fga`) is deliberately broad — it exercises
 every major OpenFGA feature:
 
-| Feature                               | Where                                             |
-| ------------------------------------- | ------------------------------------------------- |
-| Concentric roles (rank ladder)        | `guild`: guildmaster ▸ officer ▸ raider ▸ recruit |
-| Blocklist (`but not`)                 | `guild.member: recruit but not banned`            |
-| Parent → child → grandchild hierarchy | `vault_tab` ▸ `vault` ▸ `guild`                   |
-| Usersets / groups                     | `guild#officer`, `guild#member` on channels       |
-| Nested groups (userset of usersets)   | `alliance.member: member from guild`              |
-| Public access                         | `channel:tavern_board` viewer `user:*`            |
-| Intersection (`and`)                  | `raid.can_loot: attendee and raider from guild`   |
-| ABAC condition (numeric)              | `withdrawal_within_limit` on the vault            |
-| ABAC condition (temporal)             | `within_signup_window` on the raid                |
+| Feature                               | Where                                                      |
+| ------------------------------------- | ---------------------------------------------------------- |
+| Concentric roles (rank ladder)        | `guild`: guildmaster ▸ officer ▸ raider ▸ recruit          |
+| Blocklist (`but not`)                 | `guild.member: recruit but not banned`                     |
+| Parent → child → grandchild hierarchy | `vault_tab` ▸ `vault` ▸ `guild`                            |
+| Usersets / groups                     | `guild#officer`, `guild#member` on channels                |
+| Nested groups (userset of usersets)   | `alliance.member: member from guild`                       |
+| Public access                         | `channel:tavern_board` viewer `user:*`                     |
+| Intersection (`and`)                  | `raid.can_loot: attendee and raider from guild`            |
+| Union across sources (`or`)           | `raid.can_view: member from guild or member from alliance` |
+| Cross-org sharing (alliance raids)    | allied guilds' members can view + sign up shared raids     |
+| ABAC condition (numeric)              | `withdrawal_within_limit` on the vault                     |
+| ABAC condition (temporal)             | `within_signup_window` on the raid                         |
 
 ### Personas
 
-|    | Persona                          | Access                                            |
-| -- | -------------------------------- | ------------------------------------------------- |
-| 👑 | **Thrall** — Guildmaster         | everything (24/24)                                |
-| 🛡️ | **Jaina** — Officer              | manage members + bank, lead raids                 |
-| ⚔️ | **Arthas** — Raider              | deposit, withdraw ≤ 500g, sign up                 |
-| 🌱 | **Rexxar** — Recruit             | can't manage; can sign up + withdraw ≤ 100g       |
-| ☠️ | **Gul'dan** — Banned             | member perks revoked; public board still readable |
-| 🤝 | **Medivh** — Allied guild        | the Pact hall, nothing inside Ironforge           |
-| 🚶 | **Wandering Adventurer** — Guest | only the public tavern board                      |
+|    | Persona                          | Access                                                           |
+| -- | -------------------------------- | ---------------------------------------------------------------- |
+| 👑 | **Thrall** — Guildmaster         | everything                                                       |
+| 🛡️ | **Jaina** — Officer              | manage members + bank, lead raids                                |
+| ⚔️ | **Arthas** — Raider              | deposit, withdraw ≤ 500g, sign up                                |
+| 🌱 | **Rexxar** — Recruit             | can't manage; can sign up + withdraw ≤ 100g                      |
+| ☠️ | **Gul'dan** — Banned             | member perks revoked; public board still readable                |
+| 🤝 | **Medivh** — Allied guild        | the Pact hall + alliance-shared raids; nothing else in Ironforge |
+| 🚶 | **Wandering Adventurer** — Guest | only the public tavern board                                     |
 
 ## Prerequisites
 
@@ -66,13 +68,15 @@ deno task dev
 ### Verify
 
 ```sh
-deno task test     # asserts the entire access matrix against the live server (154 checks)
+deno task test     # asserts the entire access matrix against the live server
 ```
 
 ## Pages
 
-- **Dashboard** (`/`) — resource cards with a live access badge per action for
-  the current persona.
+- **Dashboard** (`/`) — resource cards grouped into sections (The Guild, Guild
+  Bank, Guild Raids, Channels), each with a live access badge per action. Vaults
+  render as panels with their tabs nested inside, so the vault ▸ tab hierarchy
+  is visible at a glance.
 - **Click any badge** for a popup explaining _why_: the relation's DSL rule, the
   ABAC condition (with the context used), the relevant tuples, and the Expand
   "rules graph" — powered by `/api/explain`.
