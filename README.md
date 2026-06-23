@@ -1,4 +1,8 @@
-# ⚔️ GuildHall — an OpenFGA explorer
+<p align="center">
+  <img src="static/favicon.svg" alt="GuildHall crest" width="120" height="120" />
+</p>
+
+<h1 align="center">GuildHall — an OpenFGA explorer</h1>
 
 A hands-on demo of [OpenFGA](https://openfga.dev) (fine-grained,
 relationship-based authorization) modeled as an **MMORPG guild manager**, with a
