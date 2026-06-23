@@ -22,7 +22,7 @@ export default define.page(function App({ Component, state, url }) {
         <link rel="apple-touch-icon" href="/favicon.svg" />
       </head>
       <body class="min-h-screen bg-slate-950 text-slate-200 antialiased">
-        <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+        <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/80 backdrop-blur">
           <div class="mx-auto max-w-6xl px-4 py-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div class="flex items-center gap-2">
