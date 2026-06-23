@@ -35,16 +35,44 @@ export const handler = define.handlers({
     const vaults = RESOURCES.filter((r) => r.type === "vault");
     const tabs = RESOURCES.filter((r) => r.type === "vault_tab");
 
+    // Deposit/withdraw are ABAC-gated, so the condition needs an amount to
+    // resolve. Probe with a nominal 1g to reveal whether a grant exists at all;
+    // the real per-grant cap is enforced when the user submits a real amount.
+    const probe = { requested_amount: 1 };
     const r = await batchCheck([
       ...vaults.flatMap((v) => [
         { id: `${v.key}_view`, user, relation: "can_view", object: v.object },
-        { id: `${v.key}_dep`, user, relation: "can_deposit", object: v.object },
-        { id: `${v.key}_wd`, user, relation: "can_withdraw", object: v.object },
+        {
+          id: `${v.key}_dep`,
+          user,
+          relation: "can_deposit",
+          object: v.object,
+          context: probe,
+        },
+        {
+          id: `${v.key}_wd`,
+          user,
+          relation: "can_withdraw",
+          object: v.object,
+          context: probe,
+        },
       ]),
       ...tabs.flatMap((t) => [
         { id: `${t.key}_view`, user, relation: "can_view", object: t.object },
-        { id: `${t.key}_dep`, user, relation: "can_deposit", object: t.object },
-        { id: `${t.key}_wd`, user, relation: "can_withdraw", object: t.object },
+        {
+          id: `${t.key}_dep`,
+          user,
+          relation: "can_deposit",
+          object: t.object,
+          context: probe,
+        },
+        {
+          id: `${t.key}_wd`,
+          user,
+          relation: "can_withdraw",
+          object: t.object,
+          context: probe,
+        },
       ]),
     ]);
 
