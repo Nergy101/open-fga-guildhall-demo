@@ -74,6 +74,14 @@ deno task test     # asserts the entire access matrix against the live server
 
 ## Pages
 
+- **🎮 Try it out** (`/try`) — sign in as a persona and a **real, usable Guild
+  Forum** opens in a new tab, logged in as that user. The left side-nav reveals
+  only the sections you may reach, and every action (post, withdraw, sign up,
+  roll loot, kick, edit MOTD…) is enforced **server-side** with a live `Check` —
+  hiding a button is only convenience. Sign in as several personas to feel the
+  difference: Thrall runs the guild; Gul'dan (banned) sees only the public
+  Tavern board; Medivh (allied) reaches the shared raid and can roll loot; a
+  Guest barely gets in the door.
 - **Dashboard** (`/`) — resource cards grouped into sections (The Guild, Guild
   Bank, Guild Raids, Channels), each with a live access badge per action. Vaults
   render as panels with their tabs nested inside, so the vault ▸ tab hierarchy
@@ -114,6 +122,9 @@ lib/access.ts         builds the (persona × action) check set
 routes/_middleware.ts resolves the persona cookie → ctx.state
 routes/, islands/     the Fresh UI
 tests/model_test.ts   the access matrix, asserted against live OpenFGA
+routes/forum/*         the real Guild Forum (own side-nav + server-enforced actions)
+routes/api/forum/act.ts every forum mutation, each gated by a live OpenFGA Check
+lib/forumState.ts      in-memory forum content (messages, balances, signups)
 ```
 
 The model is authored once in the readable FGA DSL and compiled to the API's
