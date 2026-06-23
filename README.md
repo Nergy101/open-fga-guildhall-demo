@@ -76,9 +76,18 @@ deno task test     # asserts the entire access matrix against the live server (1
 - **Click any badge** for a popup explaining _why_: the relation's DSL rule, the
   ABAC condition (with the context used), the relevant tuples, and the Expand
   "rules graph" — powered by `/api/explain`.
-- **Access Matrix** (`/explorer`) — every persona × action in one grid, plus an
-  **ABAC Lab**: drag the withdrawal slider / flip the signup window and watch
-  results change per persona.
+- **Access Matrix** (`/explorer`) — every persona × action in one grid, plus
+  four interactive **labs** that re-run live checks as you tweak inputs:
+  - **ABAC Lab** — drag the withdrawal slider / flip the signup window and watch
+    each persona's result change as conditions are evaluated at check time.
+  - **🪜 Rank Ladder Lab** — promote a newcomer up the rank ladder (via a
+    contextual tuple, no store mutation) and watch permissions unlock in tiers —
+    concentric relations made visible.
+  - **☠️ Ban Toggle Lab** — blocklist a member and watch every member-derived
+    perk go dark at once (`member: recruit but not banned`), while the public
+    board stays readable.
+  - **🧭 Reachability Lab** — the reverse query: `ListObjects` shows which
+    objects each persona can reach for a relation, side by side.
 - **Playground** (`/playground`) — run arbitrary `Check` / `ListObjects` calls.
 - **Model** (`/model`) — the DSL, all seeded tuples, the persona legend, and the
   store/model ids.

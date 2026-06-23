@@ -7,25 +7,7 @@ import {
   SIGNUP_WINDOW,
 } from "@/data/seed.ts";
 import { Badge } from "@/components/Badge.tsx";
-
-type Results = Record<string, boolean>;
-type Check = {
-  id: string;
-  user: string;
-  relation: string;
-  object: string;
-  context: Record<string, unknown>;
-};
-
-async function runChecks(checks: Check[]): Promise<Results> {
-  const res = await fetch("/api/check", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ checks }),
-  });
-  const json = await res.json();
-  return (json.results ?? {}) as Results;
-}
+import { type Results, runChecks } from "@/lib/labClient.ts";
 
 function PersonaResults(
   { results, relation, object, context, concept }: {
