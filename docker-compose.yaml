@@ -1,0 +1,54 @@
+name: guildhall
+
+networks:
+  openfga:
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: guildhall-postgres
+    networks:
+      - openfga
+    # Not published to the host: only OpenFGA talks to it (over the compose network).
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=openfga
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: openfga/openfga:latest
+    container_name: guildhall-migrate
+    command: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/openfga?sslmode=disable
+    networks:
+      - openfga
+
+  openfga:
+    image: openfga/openfga:latest
+    container_name: guildhall-openfga
+    command: run
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/openfga?sslmode=disable
+      - OPENFGA_LOG_FORMAT=json
+      - OPENFGA_PLAYGROUND_ENABLED=true
+    networks:
+      - openfga
+    ports:
+      # Host ports 8080/8081/5432 are taken by an ssh tunnel here, so HTTP/gRPC are remapped.
+      - "8088:8080" # HTTP API   -> http://localhost:8088
+      - "8089:8081" # gRPC API
+      - "3000:3000" # Playground (dev only) -> http://localhost:3000/playground

@@ -1,0 +1,96 @@
+model
+  schema 1.1
+
+type user
+
+# ── Alliance ─────────────────────────────────────────────────────────────────
+# NESTED GROUPS (userset of usersets): an alliance member is a member of *any*
+# guild that belongs to the alliance. `member from guild` walks alliance -> guild
+# -> guild#member transitively.
+type alliance
+  relations
+    define guild: [guild]
+    define member: member from guild
+
+# ── Guild ────────────────────────────────────────────────────────────────────
+# RANK LADDER via CONCENTRIC relations (each rank inherits the one above it),
+# a BLOCKLIST via the exclusion operator, and action permissions derived from
+# ranks.
+type guild
+  relations
+    # Rank ladder. guildmaster > officer > raider > recruit.
+    define guildmaster: [user]
+    define officer: [user] or guildmaster
+    define raider: [user] or officer
+    define recruit: [user] or raider
+
+    # Membership + blocklist. A member is anyone with any rank, minus the banned.
+    define banned: [user]
+    define member: recruit but not banned
+
+    # Permissions, derived from ranks (and from membership for reads).
+    define can_read: member
+    define can_invite: officer
+    define can_kick: officer
+    define can_edit_motd: officer
+    define can_manage_ranks: guildmaster
+    define can_disband: guildmaster
+
+# ── Vault (guild bank) ───────────────────────────────────────────────────────
+# PARENT-CHILD (a vault belongs to a guild) plus an ABAC withdrawal limit:
+# officers withdraw freely, everyone else only within a per-grant gold limit.
+type vault
+  relations
+    define guild: [guild]
+    define can_view: member from guild
+    define can_deposit: raider from guild
+    define can_manage: officer from guild
+    # Members (recruits included) get a small cap; Arthas a bigger one; officers free.
+    define can_withdraw: [user with withdrawal_within_limit, guild#member with withdrawal_within_limit] or officer from guild
+
+# ── Vault tab ────────────────────────────────────────────────────────────────
+# THREE-LEVEL HIERARCHY: tab -> vault -> guild. Access is inherited from the
+# parent vault.
+type vault_tab
+  relations
+    define vault: [vault]
+    define can_view: can_view from vault
+    define can_withdraw: can_withdraw from vault
+
+# ── Raid ─────────────────────────────────────────────────────────────────────
+# A time-boxed signup (USERSET + CONDITION) and loot rolls that require
+# BOTH attendance AND raider rank (INTERSECTION).
+type raid
+  relations
+    define guild: [guild]
+    define leader: [user] or officer from guild
+    define attendee: [user]
+    define can_view: member from guild
+    define can_edit: leader
+    # Members (recruits included) may sign up, but only while the window is open.
+    define can_signup: [guild#member with within_signup_window]
+    # Loot rolls: you must have attended AND be a raider.
+    define can_loot: attendee and raider from guild
+    define can_view_tactics: attendee or leader
+
+# ── Channels ─────────────────────────────────────────────────────────────────
+# PUBLIC ACCESS (user:*) for the tavern board, and per-channel GROUPS for the
+# rest (including the alliance nested group for the alliance hall).
+type channel
+  relations
+    define guild: [guild]
+    define viewer: [user, user:*, guild#member, guild#raider, guild#officer, alliance#member]
+    define poster: [user, guild#member, guild#officer]
+    define moderator: [guild#officer]
+    define can_read: viewer
+    define can_post: poster
+    define can_moderate: moderator
+
+# ── Conditions (ABAC) ────────────────────────────────────────────────────────
+condition within_signup_window(current_time: timestamp, opens_at: timestamp, closes_at: timestamp) {
+  current_time >= opens_at && current_time < closes_at
+}
+
+condition withdrawal_within_limit(requested_amount: int, max_amount: int) {
+  requested_amount <= max_amount
+}

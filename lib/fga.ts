@@ -1,0 +1,153 @@
+/**
+ * Minimal, dependency-free OpenFGA HTTP client (uses `fetch`).
+ *
+ * Only the handful of endpoints this demo needs: Check, BatchCheck, ListObjects.
+ * The model + tuples are written by scripts/seed.ts.
+ */
+import { type FgaConfig, loadFgaConfig } from "./store.ts";
+
+export type FgaContext = Record<string, unknown>;
+
+export interface TupleKey {
+  user: string;
+  relation: string;
+  object: string;
+}
+
+export interface CheckInput extends TupleKey {
+  /** Condition context (ABAC), e.g. { requested_amount: 250 } or { current_time }. */
+  context?: FgaContext;
+  /** Extra tuples evaluated only for this request. */
+  contextualTuples?: TupleKey[];
+}
+
+async function api<T>(
+  path: string,
+  body: unknown,
+  cfg?: FgaConfig,
+): Promise<T> {
+  const { apiUrl, storeId } = cfg ?? await loadFgaConfig();
+  const res = await fetch(`${apiUrl}/stores/${storeId}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`OpenFGA ${path} -> ${res.status}: ${await res.text()}`);
+  }
+  return await res.json() as T;
+}
+
+/** Single relationship check: "does user have relation on object?" */
+export async function check(input: CheckInput): Promise<boolean> {
+  const cfg = await loadFgaConfig();
+  const json = await api<{ allowed?: boolean }>("/check", {
+    authorization_model_id: cfg.modelId,
+    tuple_key: {
+      user: input.user,
+      relation: input.relation,
+      object: input.object,
+    },
+    context: input.context,
+    contextual_tuples: input.contextualTuples
+      ? { tuple_keys: input.contextualTuples }
+      : undefined,
+  }, cfg);
+  return json.allowed === true;
+}
+
+export interface BatchItem extends CheckInput {
+  /** Correlation id, must match ^[\w-]{1,36}$ and be unique within the batch. */
+  id: string;
+}
+
+/** OpenFGA caps BatchCheck at 50 checks per request. */
+const MAX_BATCH = 50;
+
+/** Many checks, chunked into ≤50-per-request batches run in parallel. Returns { [id]: allowed }. */
+export async function batchCheck(
+  items: BatchItem[],
+): Promise<Record<string, boolean>> {
+  if (items.length === 0) return {};
+  const cfg = await loadFgaConfig();
+
+  const chunks: BatchItem[][] = [];
+  for (let i = 0; i < items.length; i += MAX_BATCH) {
+    chunks.push(items.slice(i, i + MAX_BATCH));
+  }
+
+  const responses = await Promise.all(
+    chunks.map((chunk) =>
+      api<{ result?: Record<string, { allowed?: boolean }> }>(
+        "/batch-check",
+        {
+          authorization_model_id: cfg.modelId,
+          checks: chunk.map((it) => ({
+            tuple_key: {
+              user: it.user,
+              relation: it.relation,
+              object: it.object,
+            },
+            context: it.context,
+            contextual_tuples: it.contextualTuples
+              ? { tuple_keys: it.contextualTuples }
+              : undefined,
+            correlation_id: it.id,
+          })),
+        },
+        cfg,
+      )
+    ),
+  );
+
+  const out: Record<string, boolean> = {};
+  for (const json of responses) {
+    const result = json.result ?? {};
+    for (const [id, r] of Object.entries(result)) out[id] = r?.allowed === true;
+  }
+  for (const it of items) out[it.id] ??= false;
+  return out;
+}
+
+/** List object ids of `type` the user has `relation` to. */
+export async function listObjects(
+  input: { user: string; relation: string; type: string; context?: FgaContext },
+): Promise<string[]> {
+  const cfg = await loadFgaConfig();
+  const json = await api<{ objects?: string[] }>("/list-objects", {
+    authorization_model_id: cfg.modelId,
+    user: input.user,
+    relation: input.relation,
+    type: input.type,
+    context: input.context,
+  }, cfg);
+  return json.objects ?? [];
+}
+
+// ── Expand: the userset tree for an object#relation (the "rules graph") ──────
+export interface ExpandLeaf {
+  users?: { users?: string[] };
+  computed?: { userset?: string };
+  tupleToUserset?: { tupleset?: string; computed?: { userset?: string }[] };
+}
+
+export interface ExpandNode {
+  name?: string;
+  leaf?: ExpandLeaf;
+  union?: { nodes?: ExpandNode[] };
+  intersection?: { nodes?: ExpandNode[] };
+  difference?: { base?: ExpandNode; subtract?: ExpandNode };
+}
+
+/** Returns the root userset-tree node for `object#relation` (no user, no conditions). */
+export async function expand(
+  relation: string,
+  object: string,
+): Promise<ExpandNode | undefined> {
+  const cfg = await loadFgaConfig();
+  const json = await api<{ tree?: { root?: ExpandNode } }>("/expand", {
+    authorization_model_id: cfg.modelId,
+    tuple_key: { relation, object },
+  }, cfg);
+  return json.tree?.root;
+}
