@@ -112,6 +112,47 @@ export const RESOURCES: Resource[] = [
     ],
   },
   {
+    key: "orgrimmar",
+    name: "Guild: Orgrimmar",
+    emoji: "🪓",
+    object: "guild:orgrimmar",
+    type: "guild",
+    blurb:
+      "The allied guild in the Azeroth Pact. Medivh is an officer here — so he runs Orgrimmar, even though he's a stranger inside Ironforge.",
+    actions: [
+      {
+        key: "read",
+        label: "Read guild",
+        relation: "can_read",
+        concept: "membership (minus blocklist)",
+      },
+      {
+        key: "invite",
+        label: "Invite members",
+        relation: "can_invite",
+        concept: "rank: officer+",
+      },
+      {
+        key: "kick",
+        label: "Kick members",
+        relation: "can_kick",
+        concept: "rank: officer+",
+      },
+      {
+        key: "motd",
+        label: "Edit MOTD",
+        relation: "can_edit_motd",
+        concept: "rank: officer+",
+      },
+      {
+        key: "ranks",
+        label: "Manage ranks",
+        relation: "can_manage_ranks",
+        concept: "rank: guildmaster (none seeded)",
+      },
+    ],
+  },
+  {
     key: "vault",
     name: "Vault: Ironforge Bank",
     emoji: "🏦",

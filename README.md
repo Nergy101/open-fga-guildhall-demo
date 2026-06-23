@@ -32,15 +32,15 @@ every major OpenFGA feature:
 
 ### Personas
 
-|    | Persona                          | Access                                                           |
-| -- | -------------------------------- | ---------------------------------------------------------------- |
-| 👑 | **Thrall** — Guildmaster         | everything                                                       |
-| 🛡️ | **Jaina** — Officer              | manage members + bank, lead raids                                |
-| ⚔️ | **Arthas** — Raider              | deposit, withdraw ≤ 500g, sign up                                |
-| 🌱 | **Rexxar** — Recruit             | can't manage; can sign up + withdraw ≤ 100g                      |
-| ☠️ | **Gul'dan** — Banned             | member perks revoked; public board still readable                |
-| 🤝 | **Medivh** — Allied guild        | the Pact hall + alliance-shared raids; nothing else in Ironforge |
-| 🚶 | **Wandering Adventurer** — Guest | only the public tavern board                                     |
+|    | Persona                                    | Access                                                                      |
+| -- | ------------------------------------------ | --------------------------------------------------------------------------- |
+| 👑 | **Thrall** — Guildmaster                   | everything                                                                  |
+| 🛡️ | **Jaina** — Officer                        | manage members + bank, lead raids                                           |
+| ⚔️ | **Arthas** — Raider                        | deposit, withdraw ≤ 500g, sign up                                           |
+| 🌱 | **Rexxar** — Recruit                       | can't manage; can sign up + withdraw ≤ 100g                                 |
+| ☠️ | **Gul'dan** — Banned                       | member perks revoked; public board still readable                           |
+| 🤝 | **Medivh** — Officer of Orgrimmar (allied) | runs his own guild; in Ironforge only the Pact hall + alliance-shared raids |
+| 🚶 | **Wandering Adventurer** — Guest           | only the public tavern board                                                |
 
 ## Prerequisites
 

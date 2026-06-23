@@ -36,6 +36,10 @@ const MATRIX: [
   ["guild:ironforge", "can_edit_motd", undefined, [T, T, F, F, F, F, F]],
   ["guild:ironforge", "can_manage_ranks", undefined, [T, F, F, F, F, F, F]],
   ["guild:ironforge", "can_disband", undefined, [T, F, F, F, F, F, F]],
+  // Allied guild Orgrimmar: only Medivh (its officer) has any access here
+  ["guild:orgrimmar", "can_read", undefined, [F, F, F, F, F, T, F]],
+  ["guild:orgrimmar", "can_invite", undefined, [F, F, F, F, F, T, F]],
+  ["guild:orgrimmar", "can_manage_ranks", undefined, [F, F, F, F, F, F, F]],
   // Vault: parent-child + ABAC (default 250g)
   ["vault:ironforge_bank", "can_view", undefined, [T, T, T, T, F, F, F]],
   ["vault:ironforge_bank", "can_deposit", undefined, [T, T, T, F, F, F, F]],

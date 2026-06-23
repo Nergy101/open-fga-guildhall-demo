@@ -54,10 +54,10 @@ export const PERSONAS: Persona[] = [
   {
     id: "medivh",
     name: "Medivh",
-    role: "Allied guild",
+    role: "Officer · Orgrimmar",
     emoji: "🤝",
     blurb:
-      "Member of allied guild Orgrimmar. Reaches the Pact hall and alliance-shared raids — but nothing else inside Ironforge.",
+      "Officer of the allied guild Orgrimmar — he runs his own guild. In Ironforge he reaches only the Pact hall and alliance-shared raids; nothing else.",
   },
   {
     id: "guest",
