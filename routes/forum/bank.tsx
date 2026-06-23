@@ -12,6 +12,7 @@ interface TabView {
   emoji: string;
   balance: number;
   canWithdraw: boolean;
+  canDeposit: boolean;
 }
 interface VaultView {
   object: string;
@@ -42,6 +43,7 @@ export const handler = define.handlers({
       ]),
       ...tabs.flatMap((t) => [
         { id: `${t.key}_view`, user, relation: "can_view", object: t.object },
+        { id: `${t.key}_dep`, user, relation: "can_deposit", object: t.object },
         { id: `${t.key}_wd`, user, relation: "can_withdraw", object: t.object },
       ]),
     ]);
@@ -64,6 +66,7 @@ export const handler = define.handlers({
             emoji: t.emoji,
             balance: getBalance(t.object),
             canWithdraw: r[`${t.key}_wd`],
+            canDeposit: r[`${t.key}_dep`],
           })),
       }));
 
@@ -132,7 +135,7 @@ export default define.page<typeof handler>(function Bank({ data, state }) {
                             object={t.object}
                             initialBalance={t.balance}
                             canWithdraw={t.canWithdraw}
-                            canDeposit={false}
+                            canDeposit={t.canDeposit}
                           />
                         </div>
                       </div>

@@ -171,7 +171,8 @@ export const RESOURCES: Resource[] = [
         key: "deposit",
         label: "Deposit gold",
         relation: "can_deposit",
-        concept: "parent: raider of guild",
+        concept: "ABAC: members ≤100g, Arthas ≤500g, officers free",
+        abac: "withdraw",
       },
       {
         key: "withdraw",
@@ -197,6 +198,13 @@ export const RESOURCES: Resource[] = [
         label: "View tab",
         relation: "can_view",
         concept: "inherited via tab ▸ vault ▸ guild",
+      },
+      {
+        key: "deposit",
+        label: "Deposit to tab",
+        relation: "can_deposit",
+        concept: "ABAC inherited from vault",
+        abac: "withdraw",
       },
       {
         key: "withdraw",
@@ -381,13 +389,36 @@ export const RESOURCES: Resource[] = [
     ],
   },
   {
+    key: "orgrimmar_hall",
+    name: "Channel: Orgrimmar Hall",
+    emoji: "🪓",
+    object: "channel:orgrimmar_hall",
+    type: "channel",
+    blurb:
+      "Orgrimmar's members-only board — the allied guild's own chat (Medivh reads and posts here).",
+    actions: [
+      {
+        key: "read",
+        label: "Read",
+        relation: "can_read",
+        concept: "group: orgrimmar#member",
+      },
+      {
+        key: "post",
+        label: "Post",
+        relation: "can_post",
+        concept: "group: orgrimmar#member",
+      },
+    ],
+  },
+  {
     key: "warchest",
     name: "Vault: War Chest",
     emoji: "⚜️",
     object: "vault:war_chest",
     type: "vault",
     blurb:
-      "Officers' reserve: members may view and deposit, but only officers and the guildmaster can withdraw.",
+      "Officers' reserve: members may view it, but only officers and the guildmaster move gold — deposit and withdraw alike.",
     actions: [
       {
         key: "view",
@@ -399,7 +430,7 @@ export const RESOURCES: Resource[] = [
         key: "deposit",
         label: "Deposit gold",
         relation: "can_deposit",
-        concept: "parent: raider of guild",
+        concept: "officers + guildmaster only",
       },
       {
         key: "withdraw",
@@ -426,6 +457,13 @@ export const RESOURCES: Resource[] = [
         concept: "inherited via tab ▸ vault ▸ guild",
       },
       {
+        key: "deposit",
+        label: "Deposit to tab",
+        relation: "can_deposit",
+        concept: "ABAC inherited from vault",
+        abac: "withdraw",
+      },
+      {
         key: "withdraw",
         label: "Withdraw 250g from tab",
         relation: "can_withdraw",
@@ -449,6 +487,12 @@ export const RESOURCES: Resource[] = [
         label: "View tab",
         relation: "can_view",
         concept: "inherited via tab ▸ vault ▸ guild",
+      },
+      {
+        key: "deposit",
+        label: "Deposit to tab",
+        relation: "can_deposit",
+        concept: "officers + guildmaster (inherited)",
       },
       {
         key: "withdraw",

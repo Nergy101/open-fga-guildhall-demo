@@ -46,9 +46,10 @@ type vault
   relations
     define guild: [guild]
     define can_view: member from guild
-    define can_deposit: raider from guild
     define can_manage: officer from guild
-    # Members (recruits included) get a small cap; Arthas a bigger one; officers free.
+    # Deposits and withdrawals follow the same rule: officers move gold freely;
+    # members (raiders + recruits) are capped per-grant; outsiders are denied.
+    define can_deposit: [user with withdrawal_within_limit, guild#member with withdrawal_within_limit] or officer from guild
     define can_withdraw: [user with withdrawal_within_limit, guild#member with withdrawal_within_limit] or officer from guild
 
 # ── Vault tab ────────────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ type vault_tab
   relations
     define vault: [vault]
     define can_view: can_view from vault
+    define can_deposit: can_deposit from vault
     define can_withdraw: can_withdraw from vault
 
 # ── Raid ─────────────────────────────────────────────────────────────────────

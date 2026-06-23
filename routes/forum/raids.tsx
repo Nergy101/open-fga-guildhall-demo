@@ -4,6 +4,7 @@ import { batchCheck } from "@/lib/fga.ts";
 import { RESOURCES } from "@/data/catalog.ts";
 import { getPersona } from "@/data/personas.ts";
 import { getSignups, isSignedUp } from "@/lib/forumState.ts";
+import { PAST_RAIDS } from "@/data/seed.ts";
 import { ForumShell } from "@/components/ForumShell.tsx";
 import ForumActionButton from "@/islands/ForumActionButton.tsx";
 
@@ -17,6 +18,7 @@ interface RaidView {
   canTactics: boolean;
   canEdit: boolean;
   signedUp: boolean;
+  concluded: boolean;
   roster: { emoji: string; name: string }[];
 }
 
@@ -78,6 +80,7 @@ export const handler = define.handlers({
         canTactics: r[`${raid.key}_tac`],
         canEdit: r[`${raid.key}_edit`],
         signedUp: isSignedUp(raid.object, user),
+        concluded: PAST_RAIDS.includes(raid.object),
         roster: getSignups(raid.object).map((u) => {
           const p = getPersona(u.replace(/^user:/, ""));
           return { emoji: p.emoji, name: p.name };
@@ -143,7 +146,19 @@ export default define.page<typeof handler>(function Raids({ data, state }) {
             )}
 
             <div class="mt-3 flex flex-wrap items-center gap-3">
-              {raid.signedUp
+              {raid.concluded
+                ? (raid.signedUp
+                  ? (
+                    <span class="rounded-md border border-emerald-700/40 bg-emerald-900/20 px-3 py-1.5 text-xs font-semibold text-emerald-200">
+                      ⚔️ You raided this
+                    </span>
+                  )
+                  : (
+                    <span class="rounded-md border border-rose-800/40 bg-rose-900/15 px-3 py-1.5 text-xs font-semibold text-rose-300">
+                      💀 You missed out!
+                    </span>
+                  ))
+                : raid.signedUp
                 ? (
                   <span class="rounded-md border border-emerald-700/40 bg-emerald-900/20 px-3 py-1.5 text-xs font-semibold text-emerald-200">
                     ✓ You're on the roster

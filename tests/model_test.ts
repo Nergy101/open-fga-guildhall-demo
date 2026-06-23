@@ -42,7 +42,15 @@ const MATRIX: [
   ["guild:orgrimmar", "can_manage_ranks", undefined, [F, F, F, F, F, F, F]],
   // Vault: parent-child + ABAC (default 250g)
   ["vault:ironforge_bank", "can_view", undefined, [T, T, T, T, F, F, F]],
-  ["vault:ironforge_bank", "can_deposit", undefined, [T, T, T, F, F, F, F]],
+  ["vault:ironforge_bank", "can_deposit", { requested_amount: 250 }, [
+    T,
+    T,
+    T,
+    F,
+    F,
+    F,
+    F,
+  ]],
   ["vault:ironforge_bank", "can_withdraw", { requested_amount: 250 }, [
     T,
     T,
@@ -100,7 +108,7 @@ const MATRIX: [
   ["channel:pact_hall", "can_read", undefined, [T, T, T, T, F, T, F]],
   // Second vault: the War Chest — officers + guildmaster only may withdraw
   ["vault:war_chest", "can_view", undefined, [T, T, T, T, F, F, F]],
-  ["vault:war_chest", "can_deposit", undefined, [T, T, T, F, F, F, F]],
+  ["vault:war_chest", "can_deposit", undefined, [T, T, F, F, F, F, F]],
   ["vault:war_chest", "can_withdraw", undefined, [T, T, F, F, F, F, F]],
   // Extra tabs inherit their parent vault's rules
   ["vault_tab:materials", "can_withdraw", { requested_amount: 250 }, [
@@ -129,6 +137,9 @@ const MATRIX: [
   ]],
   ["raid:onyxia", "can_loot", undefined, [T, T, T, F, F, T, F]],
   ["raid:onyxia", "can_view_tactics", undefined, [T, T, T, T, F, T, F]],
+  // Orgrimmar's own board: only its members (Medivh) can read or post
+  ["channel:orgrimmar_hall", "can_read", undefined, [F, F, F, F, F, T, F]],
+  ["channel:orgrimmar_hall", "can_post", undefined, [F, F, F, F, F, T, F]],
 ];
 
 Deno.test("access matrix matches the design for every persona", async (t) => {
@@ -348,13 +359,17 @@ Deno.test("ListObjects returns the right channels per persona", async () => {
   );
   assertEquals(
     await asSet("user:medivh"),
-    new Set(["channel:tavern_board", "channel:pact_hall"]),
+    new Set([
+      "channel:tavern_board",
+      "channel:pact_hall",
+      "channel:orgrimmar_hall",
+    ]),
   );
   assertEquals(await asSet("user:guest"), new Set(["channel:tavern_board"]));
 });
 
 Deno.test("batchCheck chunks >50 checks correctly", async () => {
-  // 7 personas x 36 actions = 252 checks, well over the 50/request cap.
+  // 7 personas x 51 actions = 357 checks, well over the 50/request cap.
   const items = PERSONAS.flatMap((p) =>
     buildItems(p, personaUser(p), { currentTime: DURING })
   );

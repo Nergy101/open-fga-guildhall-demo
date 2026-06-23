@@ -27,6 +27,9 @@ export const ARTHAS_WITHDRAW_LIMIT = 500;
 /** Baseline gold withdrawal cap for any member, recruits included (stored on the tuple). */
 export const MEMBER_WITHDRAW_LIMIT = 100;
 
+/** Raids that have already happened — signup is closed; the forum marks them concluded. */
+export const PAST_RAIDS = ["raid:molten_core", "raid:blackwing_lair"];
+
 export const TUPLES: SeedTuple[] = [
   // ── Alliance: the Azeroth Pact contains both guilds ──────────────────────
   {
@@ -84,11 +87,31 @@ export const TUPLES: SeedTuple[] = [
       context: { max_amount: MEMBER_WITHDRAW_LIMIT },
     },
   },
+  // Deposit grants mirror the withdrawal grants: Arthas up to his bigger cap,
+  // any member (recruits included) up to the baseline cap. Tabs inherit these.
+  {
+    user: "user:arthas",
+    relation: "can_deposit",
+    object: "vault:ironforge_bank",
+    condition: {
+      name: "withdrawal_within_limit",
+      context: { max_amount: ARTHAS_WITHDRAW_LIMIT },
+    },
+  },
+  {
+    user: "guild:ironforge#member",
+    relation: "can_deposit",
+    object: "vault:ironforge_bank",
+    condition: {
+      name: "withdrawal_within_limit",
+      context: { max_amount: MEMBER_WITHDRAW_LIMIT },
+    },
+  },
 
   // ── Second vault: the War Chest (officers + guildmaster only) ─────────────
   // No member/raider withdraw grants are written here, so `can_withdraw`
   // resolves only through the model's `officer from guild` — i.e. officers and
-  // the guildmaster. Members can still view and deposit.
+  // the guildmaster. Members can still view it (deposits/withdrawals are officer-only).
   { user: "guild:ironforge", relation: "guild", object: "vault:war_chest" },
 
   // ── Extra vault tabs (three-level hierarchy: tab ▸ vault ▸ guild) ──────────
@@ -202,5 +225,21 @@ export const TUPLES: SeedTuple[] = [
     user: "alliance:azeroth_pact#member",
     relation: "viewer",
     object: "channel:pact_hall",
+  },
+  // Orgrimmar's own members-only board — Medivh can read his own guild's channel.
+  {
+    user: "guild:orgrimmar",
+    relation: "guild",
+    object: "channel:orgrimmar_hall",
+  },
+  {
+    user: "guild:orgrimmar#member",
+    relation: "viewer",
+    object: "channel:orgrimmar_hall",
+  },
+  {
+    user: "guild:orgrimmar#member",
+    relation: "poster",
+    object: "channel:orgrimmar_hall",
   },
 ];

@@ -44,6 +44,13 @@ const CHECK_EXAMPLES: {
     context: "",
   },
   {
+    label: "Medivh reads his own guild's channel",
+    user: "user:medivh",
+    relation: "can_read",
+    object: "channel:orgrimmar_hall",
+    context: "",
+  },
+  {
     label: "Jaina disbands guild",
     user: "user:jaina",
     relation: "can_disband",

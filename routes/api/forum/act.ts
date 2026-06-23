@@ -29,6 +29,7 @@ interface Body {
   raid?: string;
   amount?: number;
   body?: string;
+  target?: string;
 }
 
 /**
@@ -114,6 +115,7 @@ export const handler = define.handlers({
         }
         relation = "can_deposit";
         object = b.vault;
+        context = { requested_amount: amount };
         run = () => {
           const left = adjustBalance(object, amount);
           return { message: `Deposited ${amount}g.`, balance: left };
@@ -172,6 +174,24 @@ export const handler = define.handlers({
         break;
       }
       case "kick": {
+        const target = b.target;
+        if (!target) {
+          return Response.json({ ok: false, message: "Bad request." }, {
+            status: 400,
+          });
+        }
+        // Guildmasters cannot be kicked — not even by an officer.
+        const targetIsGm = await check({
+          user: `user:${target}`,
+          relation: "guildmaster",
+          object: GUILD,
+        });
+        if (targetIsGm) {
+          return Response.json({
+            ok: false,
+            message: "🔒 You can't kick a guildmaster.",
+          }, { status: 403 });
+        }
         relation = "can_kick";
         object = GUILD;
         run = () => ({

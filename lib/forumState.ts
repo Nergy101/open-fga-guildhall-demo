@@ -61,6 +61,11 @@ seedMessage(
   "user:medivh",
   "Orgrimmar sends greetings to the Pact. 🤝",
 );
+seedMessage(
+  "channel:orgrimmar_hall",
+  "user:medivh",
+  "Lok'tar! Orgrimmar war-room — for the Horde and the Pact.",
+);
 
 balances.set("vault:ironforge_bank", 18_500);
 balances.set("vault:war_chest", 64_000);

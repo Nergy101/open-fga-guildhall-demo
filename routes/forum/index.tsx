@@ -125,10 +125,11 @@ export default define.page<typeof handler>(function GuildHall({ data, state }) {
                     {p.role}
                   </div>
                 </div>
-                {canKick && id !== forum.persona.id && (
+                {canKick && id !== forum.persona.id &&
+                  p.role !== "Guildmaster" && (
                   <ForumActionButton
                     kind="kick"
-                    payload={{ body: p.name }}
+                    payload={{ target: id, body: p.name }}
                     label="Kick"
                     tone="danger"
                     size="xs"
