@@ -51,6 +51,10 @@ type vault
     # members (raiders + recruits) are capped per-grant; outsiders are denied.
     define can_deposit: [user with withdrawal_within_limit, guild#member with withdrawal_within_limit] or officer from guild
     define can_withdraw: [user with withdrawal_within_limit, guild#member with withdrawal_within_limit] or officer from guild
+    # Rate limit: a member may withdraw only once per cooldown window (officers
+    # bypass). The app supplies current_time + last_withdrawal at check time;
+    # OpenFGA does the temporal comparison.
+    define can_withdraw_now: [guild#member with cooldown_elapsed] or officer from guild
 
 # ── Vault tab ────────────────────────────────────────────────────────────────
 # THREE-LEVEL HIERARCHY: tab -> vault -> guild. Access is inherited from the
@@ -61,6 +65,7 @@ type vault_tab
     define can_view: can_view from vault
     define can_deposit: can_deposit from vault
     define can_withdraw: can_withdraw from vault
+    define can_withdraw_now: can_withdraw_now from vault
 
 # ── Raid ─────────────────────────────────────────────────────────────────────
 # A time-boxed signup (USERSET + CONDITION) and loot rolls that require
@@ -109,4 +114,8 @@ condition within_signup_window(current_time: timestamp, opens_at: timestamp, clo
 
 condition withdrawal_within_limit(requested_amount: int, max_amount: int) {
   requested_amount <= max_amount
+}
+
+condition cooldown_elapsed(current_time: timestamp, last_withdrawal: timestamp, cooldown: duration) {
+  current_time >= last_withdrawal + cooldown
 }

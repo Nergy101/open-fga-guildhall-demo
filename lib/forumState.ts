@@ -21,6 +21,8 @@ const messages = new Map<string, ForumMessage[]>();
 const balances = new Map<string, number>();
 // raid object id -> set of signed-up user ids
 const signups = new Map<string, Set<string>>();
+// "user|object" -> last successful withdrawal time (ms), for the cooldown
+const lastWithdraw = new Map<string, number>();
 let motd =
   "⚔️ Molten Core this weekend — bring fire resist! Officers, post assignments in the War Council.";
 
@@ -122,6 +124,19 @@ export function adjustBalance(vault: string, delta: number): number {
   const next = getBalance(vault) + delta;
   balances.set(vault, next);
   return next;
+}
+
+/** Last time `user` withdrew from `object` (ms since epoch), or 0 if never. */
+export function getLastWithdrawal(user: string, object: string): number {
+  return lastWithdraw.get(`${user}|${object}`) ?? 0;
+}
+
+export function recordWithdrawal(
+  user: string,
+  object: string,
+  at: number,
+): void {
+  lastWithdraw.set(`${user}|${object}`, at);
 }
 
 // ── Raids ────────────────────────────────────────────────────────────────────

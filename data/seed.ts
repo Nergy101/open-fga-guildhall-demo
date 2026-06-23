@@ -30,6 +30,13 @@ export const MEMBER_WITHDRAW_LIMIT = 100;
 /** Raids that have already happened — signup is closed; the forum marks them concluded. */
 export const PAST_RAIDS = ["raid:molten_core", "raid:blackwing_lair"];
 
+/**
+ * A member may withdraw only once per this window. Short here so the cooldown
+ * is observable in a demo session; you'd use "12h" in production.
+ */
+export const WITHDRAW_COOLDOWN = "20s";
+export const WITHDRAW_COOLDOWN_SECONDS = 20;
+
 export const TUPLES: SeedTuple[] = [
   // ── Alliance: the Azeroth Pact contains both guilds ──────────────────────
   {
@@ -105,6 +112,18 @@ export const TUPLES: SeedTuple[] = [
     condition: {
       name: "withdrawal_within_limit",
       context: { max_amount: MEMBER_WITHDRAW_LIMIT },
+    },
+  },
+  // Withdrawal cooldown: members get one withdrawal per WITHDRAW_COOLDOWN.
+  // OpenFGA does the time comparison; the app supplies current_time and the
+  // user's last_withdrawal as request context. Officers bypass it. Tabs inherit.
+  {
+    user: "guild:ironforge#member",
+    relation: "can_withdraw_now",
+    object: "vault:ironforge_bank",
+    condition: {
+      name: "cooldown_elapsed",
+      context: { cooldown: WITHDRAW_COOLDOWN },
     },
   },
 

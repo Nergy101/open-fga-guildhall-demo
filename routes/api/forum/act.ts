@@ -7,8 +7,11 @@ import {
   adjustBalance,
   deleteMessage,
   getBalance,
+  getLastWithdrawal,
+  recordWithdrawal,
   setMotd,
 } from "@/lib/forumState.ts";
+import { WITHDRAW_COOLDOWN_SECONDS } from "@/data/seed.ts";
 
 const GUILD = "guild:ironforge";
 
@@ -140,6 +143,7 @@ export const handler = define.handlers({
             };
           }
           const left = adjustBalance(object, -amount);
+          recordWithdrawal(user, object, Date.now());
           return { message: `Withdrew ${amount}g.`, balance: left };
         };
         break;
@@ -271,6 +275,36 @@ export const handler = define.handlers({
           : `🔒 ${persona.name} has no ${b.kind} access here.`;
       }
       return Response.json({ ok: false, message }, { status: 403 });
+    }
+
+    // Withdrawal cooldown — OpenFGA does the time comparison via cooldown_elapsed;
+    // the app supplies current_time and the user's last withdrawal. Officers bypass.
+    if (b.kind === "withdraw" && object) {
+      const last = getLastWithdrawal(user, object);
+      const okNow = await check({
+        user,
+        relation: "can_withdraw_now",
+        object,
+        context: {
+          current_time: new Date().toISOString(),
+          last_withdrawal: last
+            ? new Date(last).toISOString()
+            : "1970-01-01T00:00:00Z",
+        },
+      });
+      if (!okNow) {
+        const wait = Math.max(
+          1,
+          Math.ceil(
+            (last + WITHDRAW_COOLDOWN_SECONDS * 1000 - Date.now()) / 1000,
+          ),
+        );
+        return Response.json({
+          ok: false,
+          message:
+            `⏳ Cooldown — ${persona.name} just withdrew here. Try again in ~${wait}s (one withdrawal per ${WITHDRAW_COOLDOWN_SECONDS}s in this demo; you'd set 12h in production).`,
+        }, { status: 403 });
+      }
     }
 
     const result = run();

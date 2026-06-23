@@ -15,20 +15,21 @@ OpenFGA server**.
 The authorization model (`lib/model.fga`) is deliberately broad — it exercises
 every major OpenFGA feature:
 
-| Feature                               | Where                                                               |
-| ------------------------------------- | ------------------------------------------------------------------- |
-| Concentric roles (rank ladder)        | `guild`: guildmaster ▸ officer ▸ raider ▸ recruit                   |
-| Blocklist (`but not`)                 | `guild.member: recruit but not banned`                              |
-| Parent → child → grandchild hierarchy | `vault_tab` ▸ `vault` ▸ `guild`                                     |
-| Usersets / groups                     | `guild#officer`, `guild#member` on channels                         |
-| Nested groups (userset of usersets)   | `alliance.member: member from guild`                                |
-| Public access                         | `channel:tavern_board` viewer `user:*`                              |
-| Intersection (`and`)                  | `raid.can_loot: attendee and raider from guild`                     |
-| Union across sources (`or`)           | `raid.can_view: member from guild or member from alliance`          |
-| Exclusion overrides attendance        | `raid.can_view_tactics: (attendee or leader) but not banned`        |
-| Cross-org sharing (alliance raids)    | allied guilds' members view, sign up, and roll loot on shared raids |
-| ABAC condition (numeric)              | `withdrawal_within_limit` on the vault                              |
-| ABAC condition (temporal)             | `within_signup_window` on the raid                                  |
+| Feature                               | Where                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------- |
+| Concentric roles (rank ladder)        | `guild`: guildmaster ▸ officer ▸ raider ▸ recruit                               |
+| Blocklist (`but not`)                 | `guild.member: recruit but not banned`                                          |
+| Parent → child → grandchild hierarchy | `vault_tab` ▸ `vault` ▸ `guild`                                                 |
+| Usersets / groups                     | `guild#officer`, `guild#member` on channels                                     |
+| Nested groups (userset of usersets)   | `alliance.member: member from guild`                                            |
+| Public access                         | `channel:tavern_board` viewer `user:*`                                          |
+| Intersection (`and`)                  | `raid.can_loot: attendee and raider from guild`                                 |
+| Union across sources (`or`)           | `raid.can_view: member from guild or member from alliance`                      |
+| Exclusion overrides attendance        | `raid.can_view_tactics: (attendee or leader) but not banned`                    |
+| Cross-org sharing (alliance raids)    | allied guilds' members view, sign up, and roll loot on shared raids             |
+| ABAC condition (numeric)              | `withdrawal_within_limit` on the vault                                          |
+| ABAC condition (temporal)             | `within_signup_window` on the raid                                              |
+| ABAC time-based cooldown              | `cooldown_elapsed` — one withdrawal per window (app supplies `last_withdrawal`) |
 
 ### Personas
 
