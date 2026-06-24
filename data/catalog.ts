@@ -63,6 +63,42 @@ export const GROUPS: ResourceGroup[] = [
   },
 ];
 
+/** Sub-sections within the dashboard's Channels group, in display order. */
+export interface ChannelScope {
+  key: string;
+  title: string;
+  subtitle: string;
+  /** Channel object ids in this scope. */
+  objects: string[];
+}
+
+export const CHANNEL_SCOPES: ChannelScope[] = [
+  {
+    key: "public",
+    title: "📜 Public",
+    subtitle: "Open to everyone — even guests and the banned (user:*)",
+    objects: ["channel:tavern_board"],
+  },
+  {
+    key: "guild",
+    title: "🏰 Ironforge channels",
+    subtitle: "The main guild's own boards — members & officers",
+    objects: ["channel:general", "channel:war_council"],
+  },
+  {
+    key: "shared",
+    title: "🤝 Shared — Azeroth Pact",
+    subtitle: "Members of any guild in the alliance",
+    objects: ["channel:pact_hall"],
+  },
+  {
+    key: "allied",
+    title: "🪓 Allied guild — Orgrimmar",
+    subtitle: "Belongs to a different guild entirely",
+    objects: ["channel:orgrimmar_hall"],
+  },
+];
+
 export const RESOURCES: Resource[] = [
   {
     key: "guild",

@@ -3,6 +3,7 @@ import { define } from "@/utils.ts";
 import { batchCheck } from "@/lib/fga.ts";
 import {
   abacContext,
+  CHANNEL_SCOPES,
   checkId,
   GROUPS,
   type Resource,
@@ -218,6 +219,40 @@ export default define.page<typeof handler>(function Dashboard({ data, state }) {
                         personaId={personaId}
                       />
                     ))}
+                  </div>
+                )
+                : g.key === "channels"
+                ? (
+                  <div class="space-y-5">
+                    {CHANNEL_SCOPES.map((sc) => {
+                      const chans = cards.filter((r) =>
+                        sc.objects.includes(r.object)
+                      );
+                      if (chans.length === 0) return null;
+                      return (
+                        <div key={sc.key}>
+                          <div class="mb-2 flex flex-wrap items-baseline gap-x-2 border-l-2 border-amber-400/40 pl-2">
+                            <h3 class="text-sm font-semibold text-amber-200/90">
+                              {sc.title}
+                            </h3>
+                            <span class="text-[11px] text-slate-500">
+                              {sc.subtitle}
+                            </span>
+                          </div>
+                          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {chans.map((r) => (
+                              <ResourceCard
+                                key={r.key}
+                                r={r}
+                                results={results}
+                                user={user}
+                                personaId={personaId}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )
                 : (
