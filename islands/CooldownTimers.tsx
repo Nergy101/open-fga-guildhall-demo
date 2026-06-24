@@ -1,31 +1,27 @@
 import { useSignal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import { getPersona, personaUser } from "@/data/personas.ts";
+import { getPersona } from "@/data/personas.ts";
 import { WITHDRAW_COOLDOWN_SECONDS } from "@/data/seed.ts";
-import { runChecks } from "@/lib/labClient.ts";
 
 /**
- * Cooldown Lab — live part. Each row really runs OpenFGA's `can_withdraw_now`
- * check (the `cooldown_elapsed` condition) on click. A throttled member starts
- * an animated countdown and can't withdraw again until it elapses; an officer
- * bypasses the cooldown and can withdraw freely.
+ * Cooldown Lab — live part. Each row really withdraws through /api/lab/cooldown,
+ * which gates on OpenFGA's `can_withdraw_now` and records the time server-side
+ * (shared with the forum). So a member's cooldown is enforced for real — it
+ * survives a page reload and can't be bypassed by refreshing.
  */
 
-const VAULT = "vault:ironforge_bank";
 const ROWS = ["jaina", "arthas"]; // officer (bypass) vs member (throttled)
 const CD = WITHDRAW_COOLDOWN_SECONDS;
 
 interface RowState {
-  lastWithdrawal: number; // ms since epoch; 0 = never
-  remaining: number; // seconds left on cooldown; 0 = ready
+  endsAt: number; // ms when the cooldown ends; 0 = ready
   busy: boolean;
   note: string;
   noteOk: boolean;
 }
 
 const fresh = (): RowState => ({
-  lastWithdrawal: 0,
-  remaining: 0,
+  endsAt: 0,
   busy: false,
   note: "",
   noteOk: true,
@@ -35,76 +31,46 @@ export default function CooldownTimers() {
   const rows = useSignal<Record<string, RowState>>(
     Object.fromEntries(ROWS.map((id) => [id, fresh()])),
   );
+  const now = useSignal(Date.now());
 
-  // Smoothly tick the remaining cooldown down to zero.
+  // Restore any in-progress cooldown from the server (survives reloads).
   useEffect(() => {
-    const t = setInterval(() => {
-      let changed = false;
+    (async () => {
+      const res = await fetch("/api/lab/cooldown").then((r) => r.json()).catch(
+        () => null,
+      );
+      if (!res?.status) return;
+      const t = Date.now();
       const next = { ...rows.value };
       for (const id of ROWS) {
-        const r = next[id];
-        if (r.remaining > 0) {
-          const rem = Math.max(0, CD - (Date.now() - r.lastWithdrawal) / 1000);
-          next[id] = { ...r, remaining: rem };
-          changed = true;
-        }
+        const secs = res.status[id] ?? 0;
+        if (secs > 0) next[id] = { ...next[id], endsAt: t + secs * 1000 };
       }
-      if (changed) rows.value = next;
-    }, 100);
-    return () => clearInterval(t);
+      rows.value = next;
+    })();
+    const tick = setInterval(() => (now.value = Date.now()), 100);
+    return () => clearInterval(tick);
   }, []);
 
   async function withdraw(id: string) {
     const r = rows.value[id];
-    if (r.busy || r.remaining > 0) return;
+    if (r.busy || r.endsAt > now.value) return;
     rows.value = { ...rows.value, [id]: { ...r, busy: true, note: "" } };
 
-    const now = Date.now();
-    const iso = (ms: number) => new Date(ms).toISOString();
-    const allowed = (await runChecks([{
-      id: "w",
-      user: personaUser(id),
-      relation: "can_withdraw_now",
-      object: VAULT,
-      context: {
-        current_time: iso(now),
-        last_withdrawal: r.lastWithdrawal ? iso(r.lastWithdrawal) : iso(0),
-      },
-    }]))["w"] === true;
+    const res = await fetch("/api/lab/cooldown", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ persona: id }),
+    }).then((x) => x.json()).catch(() => ({ ok: false, message: "Failed." }));
 
-    if (!allowed) {
-      rows.value = {
-        ...rows.value,
-        [id]: {
-          ...r,
-          busy: false,
-          note: "🔒 Still on cooldown.",
-          noteOk: false,
-        },
-      };
-      return;
-    }
-
-    // Allowed. Does a cooldown now apply? Probe with last_withdrawal = now:
-    // a member is blocked (cooldown), an officer is still allowed (bypass).
-    const cooldownApplies = (await runChecks([{
-      id: "p",
-      user: personaUser(id),
-      relation: "can_withdraw_now",
-      object: VAULT,
-      context: { current_time: iso(now), last_withdrawal: iso(now) },
-    }]))["p"] !== true;
-
+    const remaining = Number(res.remaining ?? 0);
     rows.value = {
       ...rows.value,
       [id]: {
-        lastWithdrawal: cooldownApplies ? now : 0,
-        remaining: cooldownApplies ? CD : 0,
+        endsAt: remaining > 0 ? Date.now() + remaining * 1000 : 0,
         busy: false,
-        note: cooldownApplies
-          ? "✓ Withdrew — cooldown started."
-          : "✓ Withdrew — officers have no cooldown.",
-        noteOk: true,
+        note: res.message ?? (res.ok ? "✓ Withdrew." : "🔒 Denied."),
+        noteOk: !!res.ok,
       },
     };
   }
@@ -115,16 +81,18 @@ export default function CooldownTimers() {
       <p class="mt-1 text-xs text-slate-400">
         Click <strong>Withdraw</strong>. A member starts a{" "}
         <span class="text-amber-300">{CD}s</span>{" "}
-        cooldown and is blocked until it runs out; an officer has none. The gate
-        is OpenFGA's <code>can_withdraw_now</code> check on every click.
+        cooldown, enforced server-side via OpenFGA's{" "}
+        <code>can_withdraw_now</code>{" "}
+        — it survives a refresh. An officer has none.
       </p>
 
       <div class="mt-3 space-y-2.5">
         {ROWS.map((id) => {
           const r = rows.value[id];
+          const remaining = Math.max(0, (r.endsAt - now.value) / 1000);
+          const onCooldown = remaining > 0;
+          const pct = onCooldown ? (remaining / CD) * 100 : 0;
           const p = getPersona(id);
-          const onCooldown = r.remaining > 0;
-          const pct = onCooldown ? (r.remaining / CD) * 100 : 0;
           return (
             <div
               key={id}
@@ -162,7 +130,7 @@ export default function CooldownTimers() {
                   {r.busy
                     ? "…"
                     : onCooldown
-                    ? `⏳ ${r.remaining.toFixed(1)}s`
+                    ? `⏳ ${remaining.toFixed(1)}s`
                     : "💸 Withdraw"}
                 </button>
               </div>
