@@ -1,6 +1,7 @@
 import { define } from "@/utils.ts";
 import AbacControls from "@/islands/AbacControls.tsx";
 import CooldownLab from "@/islands/CooldownLab.tsx";
+import CooldownTimers from "@/islands/CooldownTimers.tsx";
 import RankLadderLab from "@/islands/RankLadderLab.tsx";
 import BanToggleLab from "@/islands/BanToggleLab.tsx";
 import ReachabilityLab from "@/islands/ReachabilityLab.tsx";
@@ -40,6 +41,7 @@ export default define.page(function Labs() {
           </p>
         </div>
         <CooldownLab />
+        <CooldownTimers />
       </section>
 
       <section class="space-y-3">
