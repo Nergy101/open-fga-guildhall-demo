@@ -51,7 +51,7 @@ every major OpenFGA feature:
 ## Run it
 
 ```sh
-# 1. Start OpenFGA (HTTP :8088, gRPC :8089, Playground :3000) + Postgres
+# 1. Start OpenFGA (HTTP :8088, gRPC :8089) + Postgres
 docker compose up -d
 
 # 2. Install deps (first time only)
@@ -105,9 +105,6 @@ deno task test     # asserts the entire access matrix against the live server
 - **Playground** (`/playground`) — run arbitrary `Check` / `ListObjects` calls.
 - **Model** (`/model`) — the DSL, all seeded tuples, the persona legend, and the
   store/model ids.
-
-You can also poke the raw store in the bundled OpenFGA **Playground** at
-[localhost:3000/playground](http://localhost:3000/playground).
 
 ## How it fits together
 

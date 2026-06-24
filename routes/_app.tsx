@@ -50,6 +50,7 @@ export default define.page(function App({ Component, state, url }) {
                   <nav class="flex gap-1 text-sm">
                     {NAV.map((n) => {
                       const active = url.pathname === n.href;
+                      const highlight = n.href === "/try";
                       return (
                         <a
                           key={n.href}
@@ -57,8 +58,10 @@ export default define.page(function App({ Component, state, url }) {
                           class={`rounded-md px-3 py-1.5 transition-colors ${
                             active
                               ? "bg-amber-400/15 text-amber-100"
+                              : highlight
+                              ? "text-amber-200 hover:bg-amber-400/10"
                               : "text-slate-300 hover:bg-slate-800"
-                          }`}
+                          } ${highlight ? "ring-1 ring-amber-400/70" : ""}`}
                         >
                           {n.label}
                         </a>
@@ -87,14 +90,10 @@ export default define.page(function App({ Component, state, url }) {
             </main>
 
             <footer class="mx-auto max-w-6xl px-4 py-8 text-center text-xs text-slate-500">
-              Every badge is a live OpenFGA <code>Check</code>. Playground UI at
-              {" "}
-              <a
-                class="underline hover:text-slate-300"
-                href="http://localhost:3000/playground"
-                target="_blank"
-              >
-                localhost:3000
+              Every badge is a live OpenFGA{" "}
+              <code>Check</code>. Run your own checks in the{" "}
+              <a class="underline hover:text-slate-300" href="/playground">
+                Playground
               </a>.
             </footer>
             <ExplainModal />

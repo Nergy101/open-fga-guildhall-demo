@@ -1,5 +1,6 @@
 import { define } from "@/utils.ts";
 import AbacControls from "@/islands/AbacControls.tsx";
+import CooldownLab from "@/islands/CooldownLab.tsx";
 import RankLadderLab from "@/islands/RankLadderLab.tsx";
 import BanToggleLab from "@/islands/BanToggleLab.tsx";
 import ReachabilityLab from "@/islands/ReachabilityLab.tsx";
@@ -26,6 +27,19 @@ export default define.page(function Labs() {
           </p>
         </div>
         <AbacControls />
+      </section>
+
+      <section class="space-y-3">
+        <div>
+          <h2 class="text-lg font-bold text-amber-100">⏳ Cooldown Lab</h2>
+          <p class="text-sm text-slate-400">
+            A time-based control: the <code>cooldown_elapsed</code>{" "}
+            condition limits members to one withdrawal per window. Set how long
+            ago they last withdrew and watch the cooldown lift — officers bypass
+            it.
+          </p>
+        </div>
+        <CooldownLab />
       </section>
 
       <section class="space-y-3">
