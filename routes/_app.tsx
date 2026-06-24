@@ -3,13 +3,13 @@ import PersonaSwitcher from "@/islands/PersonaSwitcher.tsx";
 import ExplainModal from "@/islands/ExplainModal.tsx";
 
 const NAV = [
-  { href: "/legenda", label: "Legenda" },
-  { href: "/", label: "Dashboard" },
-  { href: "/explorer", label: "Access Matrix" },
-  { href: "/labs", label: "Labs" },
-  { href: "/playground", label: "Playground" },
-  { href: "/model", label: "Model" },
-  { href: "/try", label: "Try it out" },
+  { href: "/legenda", label: "Legenda", icon: "🗺️" },
+  { href: "/", label: "Dashboard", icon: "📊" },
+  { href: "/labs", label: "Interactive Labs", icon: "🧪" },
+  { href: "/playground", label: "Playground", icon: "🎛️" },
+  { href: "/explorer", label: "Access Matrix", icon: "🔢" },
+  { href: "/model", label: "Model", icon: "📜" },
+  { href: "/try", label: "Try it out", icon: "🎮" },
 ];
 
 export default define.page(function App({ Component, state, url }) {
@@ -52,7 +52,7 @@ export default define.page(function App({ Component, state, url }) {
                       </div>
                     </div>
                   </div>
-                  <nav class="flex gap-1 text-sm">
+                  <nav class="flex flex-wrap gap-1 text-sm">
                     {NAV.map((n) => {
                       const active = url.pathname === n.href;
                       const highlight = n.href === "/try";
@@ -68,7 +68,7 @@ export default define.page(function App({ Component, state, url }) {
                               : "text-slate-300 hover:bg-slate-800"
                           } ${highlight ? "ring-1 ring-amber-400/70" : ""}`}
                         >
-                          {n.label}
+                          {n.icon} {n.label}
                         </a>
                       );
                     })}
