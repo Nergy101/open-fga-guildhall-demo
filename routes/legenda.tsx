@@ -35,7 +35,7 @@ export default define.page(function Legenda() {
       id: "raids",
       title: "⚔️ Raids & attendance",
       desc:
-        "Raids belong to a guild (Ironforge here). Onyxia's Lair is shared with the whole Azeroth Pact, so allied Orgrimmar can join too — that's how Medivh (Orgrimmar) gets in. Dotted lines show who attended, tagged with their guild.",
+        "The Azeroth Pact sits on top with both guilds beneath it. Ironforge owns its raids; Onyxia's Lair is shared, so Orgrimmar links into it too (that's how Medivh joins). Dotted lines show who attended, tagged with their guild.",
       chart: raidsChart(),
       fill: true,
     },

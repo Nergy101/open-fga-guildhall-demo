@@ -104,8 +104,9 @@ export function bankChart(): string {
   return lines.join("\n");
 }
 
-/** Owning guild ▸ raids ▸ attendees — attendees tagged with their guild, and
- * alliance-shared raids shown opening to every allied guild. */
+/** Azeroth Pact ▸ its guilds ▸ raids ▸ attendees. The owning guild "owns" each
+ * raid; a shared raid also links to every other allied guild, and attendees are
+ * tagged with their guild. */
 export function raidsChart(): string {
   const lines = [
     `%%{init: {"themeVariables": {"fontSize": "16px"}, "flowchart": {"nodeSpacing": 30, "rankSpacing": 90}}}%%`,
@@ -125,6 +126,16 @@ export function raidsChart(): string {
   const allianceGuilds = TUPLES
     .filter((t) => t.relation === "guild" && t.object.startsWith("alliance:"))
     .map((t) => t.user);
+  // Alliance ▸ its guilds (the pact sits on top, both guilds underneath).
+  for (const t of TUPLES) {
+    if (t.relation === "guild" && t.object.startsWith("alliance:")) {
+      lines.push(
+        `  ${id(t.object)}["${label(t.object)}"] --> ${id(t.user)}["${
+          label(t.user)
+        }"]`,
+      );
+    }
+  }
   // Owning guild ▸ raid.
   for (const t of TUPLES) {
     if (t.relation === "guild" && t.object.startsWith("raid:")) {
@@ -135,19 +146,17 @@ export function raidsChart(): string {
       );
     }
   }
-  // Alliance-shared raids: the pact and every *other* allied guild can join.
+  // Shared raids belong to the alliance, so every *other* allied guild links in
+  // too — e.g. Orgrimmar joins Ironforge's Onyxia.
   for (const t of TUPLES) {
     if (t.relation === "alliance" && t.object.startsWith("raid:")) {
-      lines.push(
-        `  ${id(t.user)}["${label(t.user)}"] -. shared .-> ${id(t.object)}`,
-      );
       const owner = TUPLES.find((x) =>
         x.relation === "guild" && x.object === t.object
       )?.user;
       for (const g of allianceGuilds) {
         if (g !== owner) {
           lines.push(
-            `  ${id(t.object)} -. open to .-> ${id(g)}["${label(g)}"]`,
+            `  ${id(g)}["${label(g)}"] -. shared .-> ${id(t.object)}`,
           );
         }
       }
