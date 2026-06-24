@@ -113,6 +113,18 @@ function formatExpandContent(node: ExpandNode, depth: number, lines: string[]) {
   }
 }
 
+/** The Expand userset tree for `object#relation`, as an indented outline. */
+export async function expandOutline(
+  relation: string,
+  object: string,
+): Promise<string[]> {
+  const root = await expand(relation, object);
+  if (!root) return [];
+  const out: string[] = [`${root.name ?? `${object}#${relation}`}`];
+  formatExpandContent(root, 1, out);
+  return out;
+}
+
 export async function buildExplanation(
   input: {
     user: string;

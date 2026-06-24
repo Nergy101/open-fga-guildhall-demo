@@ -176,6 +176,43 @@ export async function listObjects(
   return json.objects ?? [];
 }
 
+/**
+ * The inverse of listObjects: the users (of `userType`, default "user") that
+ * have `relation` on `object`. Usersets are expanded to concrete users; a
+ * public `user:*` grant comes back as the wildcard "user:*".
+ */
+export async function listUsers(
+  input: { object: string; relation: string; userType?: string },
+): Promise<string[]> {
+  const cfg = await loadFgaConfig();
+  const sep = input.object.indexOf(":");
+  const object = {
+    type: input.object.slice(0, sep),
+    id: input.object.slice(sep + 1),
+  };
+  const json = await api<{
+    users?: Array<{
+      object?: { type: string; id: string };
+      userset?: { type: string; id: string; relation: string };
+      wildcard?: { type: string };
+    }>;
+  }>("/list-users", {
+    authorization_model_id: cfg.modelId,
+    object,
+    relation: input.relation,
+    user_filters: [{ type: input.userType ?? "user" }],
+  }, cfg);
+  return (json.users ?? []).map((u) =>
+    u.object
+      ? `${u.object.type}:${u.object.id}`
+      : u.wildcard
+      ? `${u.wildcard.type}:*`
+      : u.userset
+      ? `${u.userset.type}:${u.userset.id}#${u.userset.relation}`
+      : "?"
+  );
+}
+
 // ── Expand: the userset tree for an object#relation (the "rules graph") ──────
 export interface ExpandLeaf {
   users?: { users?: string[] };

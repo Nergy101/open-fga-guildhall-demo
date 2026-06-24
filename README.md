@@ -102,7 +102,10 @@ deno task test     # asserts the entire access matrix against the live server
     board stays readable.
   - **🧭 Reachability Lab** — the reverse query: `ListObjects` shows which
     objects each persona can reach for a relation, side by side.
-- **Playground** (`/playground`) — run arbitrary `Check` / `ListObjects` calls.
+- **Playground** (`/playground`) — run arbitrary queries: **Check**,
+  **ListObjects**, **ListUsers** ("who can…?"), **Expand** (the rules graph),
+  and **What-if** (a Check against hypothetical contextual tuples — simulate a
+  promotion or ban without writing to the store).
 - **Model** (`/model`) — the DSL, all seeded tuples, the persona legend, and the
   store/model ids.
 
