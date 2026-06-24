@@ -24,6 +24,7 @@ interface LadderAction {
   relation: string;
   unlock: Rank;
   concept: string;
+  context?: Record<string, unknown>;
 }
 
 // Ordered by the rank at which each action first turns on.
@@ -49,8 +50,9 @@ const LADDER: LadderAction[] = [
     label: "Deposit to vault",
     object: "vault:ironforge_bank",
     relation: "can_deposit",
-    unlock: "raider",
-    concept: "raider from guild",
+    unlock: "recruit",
+    concept: "member, up to gold cap (ABAC)",
+    context: { requested_amount: 50 },
   },
   {
     id: "invite",
@@ -115,6 +117,7 @@ export default function RankLadderLab() {
       user: SUBJECT,
       relation: a.relation,
       object: a.object,
+      context: a.context,
       contextualTuples,
     })));
   }

@@ -124,20 +124,39 @@ export default function BanToggleLab() {
           );
         })}
 
-        <button
-          type="button"
-          onClick={() => {
-            banned.value = !banned.value;
-            refresh();
-          }}
-          class={`ml-auto rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-            banned.value
-              ? "border-rose-500 bg-rose-500/20 text-rose-200"
-              : "border-emerald-600 bg-emerald-500/15 text-emerald-200"
-          }`}
-        >
-          {banned.value ? "☠️ Banned" : "✓ In good standing"}
-        </button>
+        <div class="ml-auto flex items-center gap-2">
+          <span
+            class={`rounded-md border px-2.5 py-1 text-xs font-semibold ${
+              banned.value
+                ? "border-rose-500 bg-rose-500/20 text-rose-200"
+                : "border-emerald-600 bg-emerald-500/15 text-emerald-200"
+            }`}
+          >
+            {banned.value ? "☠️ Banned" : "✓ In good standing"}
+          </span>
+          <button
+            type="button"
+            disabled={banned.value}
+            onClick={() => {
+              banned.value = true;
+              refresh();
+            }}
+            class="rounded-md border border-rose-500/60 bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-200 transition-colors hover:bg-rose-500/25 disabled:opacity-40"
+          >
+            🚫 Ban
+          </button>
+          <button
+            type="button"
+            disabled={!banned.value}
+            onClick={() => {
+              banned.value = false;
+              refresh();
+            }}
+            class="rounded-md border border-emerald-600/60 bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/25 disabled:opacity-40"
+          >
+            ❎ Unban
+          </button>
+        </div>
       </div>
 
       <p class="mt-3 text-[11px] text-slate-500">

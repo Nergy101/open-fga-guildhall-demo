@@ -4,7 +4,6 @@ import { batchCheck } from "@/lib/fga.ts";
 import { abacContext, checkId, RESOURCES } from "@/data/catalog.ts";
 import { buildItems } from "@/lib/access.ts";
 import { PERSONAS, personaUser } from "@/data/personas.ts";
-import AbacControls from "@/islands/AbacControls.tsx";
 import RankLadderLab from "@/islands/RankLadderLab.tsx";
 import BanToggleLab from "@/islands/BanToggleLab.tsx";
 import ReachabilityLab from "@/islands/ReachabilityLab.tsx";
@@ -59,7 +58,7 @@ export default define.page<typeof handler>(function Explorer({ data }) {
         <p class="mt-1 text-sm text-slate-400">
           Every persona × action, each cell a live OpenFGA{" "}
           <code>Check</code>. ABAC cells (amber ring) use default context —
-          drive them live in the lab below.
+          drive them live in the <strong>ABAC Lab</strong>.
         </p>
       </section>
 
@@ -128,17 +127,6 @@ export default define.page<typeof handler>(function Explorer({ data }) {
           </tbody>
         </table>
       </div>
-
-      <section class="space-y-3">
-        <div>
-          <h2 class="text-lg font-bold text-amber-100">⚙️ ABAC Lab</h2>
-          <p class="text-sm text-slate-400">
-            Conditions are evaluated at check time. Move the slider / change the
-            window and watch results flip per persona.
-          </p>
-        </div>
-        <AbacControls />
-      </section>
 
       <section class="space-y-3">
         <div>
