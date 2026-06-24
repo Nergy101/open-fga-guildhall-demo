@@ -89,26 +89,31 @@ const LISTUSERS_EXAMPLES: {
   label: string;
   object: string;
   relation: string;
+  context: string;
 }[] = [
   {
     label: "Who can read the War Council?",
     object: "channel:war_council",
     relation: "can_read",
+    context: "",
   },
   {
-    label: "Who can withdraw the bank?",
+    label: "Who can withdraw 250g from the bank?",
     object: "vault:ironforge_bank",
     relation: "can_withdraw",
+    context: '{ "requested_amount": 250 }',
   },
   {
     label: "Who can read the Tavern (public)?",
     object: "channel:tavern_board",
     relation: "can_read",
+    context: "",
   },
   {
     label: "Who can disband Ironforge?",
     object: "guild:ironforge",
     relation: "can_disband",
+    context: "",
   },
 ];
 
@@ -212,6 +217,7 @@ export default function Playground() {
   // ListUsers state
   const uObject = useSignal("channel:war_council");
   const uRelation = useSignal("can_read");
+  const uContext = useSignal("");
   const usersResult = useSignal<{ users?: string[]; error?: string } | null>(
     null,
   );
@@ -299,6 +305,16 @@ export default function Playground() {
   async function runListUsers() {
     listingUsers.value = true;
     usersResult.value = null;
+    let context: Record<string, unknown> | undefined;
+    if (uContext.value.trim()) {
+      try {
+        context = JSON.parse(uContext.value);
+      } catch {
+        usersResult.value = { error: "context is not valid JSON" };
+        listingUsers.value = false;
+        return;
+      }
+    }
     try {
       const res = await fetch("/api/list-users", {
         method: "POST",
@@ -306,6 +322,7 @@ export default function Playground() {
         body: JSON.stringify({
           object: uObject.value,
           relation: uRelation.value,
+          context,
         }),
       });
       usersResult.value = await res.json();
@@ -559,6 +576,19 @@ export default function Playground() {
             onInput={(v) => (uRelation.value = v)}
           />
         </div>
+        <label class="mt-2 block">
+          <span class="text-[11px] uppercase tracking-wide text-slate-500">
+            context (JSON, optional — needed for ABAC relations)
+          </span>
+          <textarea
+            value={uContext.value}
+            onInput={(
+              e,
+            ) => (uContext.value = (e.target as HTMLTextAreaElement).value)}
+            rows={1}
+            class="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-100 focus:border-amber-400 focus:outline-none"
+          />
+        </label>
         <div class="mt-3 flex items-center gap-3">
           <button
             type="button"
@@ -599,6 +629,7 @@ export default function Playground() {
                 onClick={() => {
                   uObject.value = ex.object;
                   uRelation.value = ex.relation;
+                  uContext.value = ex.context;
                   usersResult.value = null;
                 }}
                 class="rounded border border-slate-700 bg-slate-800/50 px-2 py-1 text-[11px] text-slate-300 hover:border-slate-500"

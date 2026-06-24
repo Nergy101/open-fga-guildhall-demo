@@ -182,7 +182,12 @@ export async function listObjects(
  * public `user:*` grant comes back as the wildcard "user:*".
  */
 export async function listUsers(
-  input: { object: string; relation: string; userType?: string },
+  input: {
+    object: string;
+    relation: string;
+    userType?: string;
+    context?: FgaContext;
+  },
 ): Promise<string[]> {
   const cfg = await loadFgaConfig();
   const sep = input.object.indexOf(":");
@@ -201,6 +206,7 @@ export async function listUsers(
     object,
     relation: input.relation,
     user_filters: [{ type: input.userType ?? "user" }],
+    context: input.context,
   }, cfg);
   return (json.users ?? []).map((u) =>
     u.object

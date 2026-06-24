@@ -5,7 +5,12 @@ import { listUsers } from "@/lib/fga.ts";
 // "Who has <relation> on <object>?" — the inverse of list-objects.
 export const handler = define.handlers({
   async POST(ctx) {
-    let body: { object?: string; relation?: string; userType?: string };
+    let body: {
+      object?: string;
+      relation?: string;
+      userType?: string;
+      context?: Record<string, unknown>;
+    };
     try {
       body = await ctx.req.json();
     } catch {
@@ -21,6 +26,7 @@ export const handler = define.handlers({
         object: body.object,
         relation: body.relation,
         userType: body.userType,
+        context: body.context,
       });
       return Response.json({ users });
     } catch (err) {
