@@ -3,24 +3,28 @@ import PersonaSwitcher from "@/islands/PersonaSwitcher.tsx";
 import ExplainModal from "@/islands/ExplainModal.tsx";
 
 const NAV = [
+  { href: "/legenda", label: "Legenda" },
   { href: "/", label: "Dashboard" },
   { href: "/explorer", label: "Access Matrix" },
   { href: "/labs", label: "Labs" },
   { href: "/playground", label: "Playground" },
   { href: "/model", label: "Model" },
-  { href: "/legenda", label: "Legenda" },
   { href: "/try", label: "Try it out" },
 ];
 
 export default define.page(function App({ Component, state, url }) {
   const persona = state.persona;
   const bare = url.pathname.startsWith("/forum");
+  // On the forum (the "Try it out" app) the tab title carries the active persona.
+  const title = bare && state.forum
+    ? `GuildHall · ${state.forum.persona.name}`
+    : "GuildHall · OpenFGA explorer";
   return (
     <html lang="en" class="dark">
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>GuildHall · OpenFGA explorer</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="apple-touch-icon" href="/favicon.svg" />

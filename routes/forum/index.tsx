@@ -1,7 +1,6 @@
 import { page } from "fresh";
 import { define } from "@/utils.ts";
 import { batchCheck } from "@/lib/fga.ts";
-import { PERSONAS } from "@/data/personas.ts";
 import { getMotd } from "@/lib/forumState.ts";
 import { ForumShell } from "@/components/ForumShell.tsx";
 import ForumActionButton from "@/islands/ForumActionButton.tsx";
@@ -9,8 +8,17 @@ import MotdEditor from "@/islands/MotdEditor.tsx";
 
 const GUILD = "guild:ironforge";
 
-// Ironforge's own roster (Medivh is allied, the Guest is unaffiliated).
-const ROSTER = ["thrall", "jaina", "arthas", "rexxar", "guldan"];
+// Ironforge's roster. Magni & Muradin are co-guildmasters — NPCs (not switchable
+// personas) who hold guildmaster rank in the store, so the council has 3 GMs.
+const ROSTER: { id: string; name: string; emoji: string; role: string }[] = [
+  { id: "thrall", name: "Thrall", emoji: "👑", role: "Guildmaster" },
+  { id: "magni", name: "Magni", emoji: "👑", role: "Guildmaster" },
+  { id: "muradin", name: "Muradin", emoji: "👑", role: "Guildmaster" },
+  { id: "jaina", name: "Jaina", emoji: "🛡️", role: "Officer" },
+  { id: "arthas", name: "Arthas", emoji: "⚔️", role: "Raider" },
+  { id: "rexxar", name: "Rexxar", emoji: "🌱", role: "Recruit" },
+  { id: "guldan", name: "Gul'dan", emoji: "☠️", role: "Banned" },
+];
 
 export const handler = define.handlers({
   async GET(ctx) {
@@ -109,37 +117,59 @@ export default define.page<typeof handler>(function GuildHall({ data, state }) {
           )}
         </div>
         <ul class="mt-3 divide-y divide-slate-800/70">
-          {ROSTER.map((id) => {
-            const p = PERSONAS.find((x) => x.id === id)!;
-            const banned = id === "guldan";
+          {ROSTER.map((m) => {
+            const banned = m.id === "guldan";
+            const isGm = m.role === "Guildmaster";
+            const isSelf = m.id === forum.persona.id;
             return (
-              <li key={id} class="flex items-center gap-3 py-2">
-                <span class="text-lg">{p.emoji}</span>
+              <li key={m.id} class="flex items-center gap-3 py-2">
+                <span class="text-lg">{m.emoji}</span>
                 <div class="flex-1">
-                  <div class="text-sm text-slate-200">{p.name}</div>
+                  <div class="text-sm text-slate-200">{m.name}</div>
                   <div
                     class={`text-[11px] ${
                       banned ? "text-rose-400" : "text-slate-500"
                     }`}
                   >
-                    {p.role}
+                    {m.role}
                   </div>
                 </div>
-                {canKick && id !== forum.persona.id &&
-                  p.role !== "Guildmaster" && (
-                  <ForumActionButton
-                    kind="kick"
-                    payload={{ target: id, body: p.name }}
-                    label="Kick"
-                    tone="danger"
-                    size="xs"
-                    reload={false}
-                  />
+                {!isSelf && (
+                  isGm
+                    ? (canManageRanks && (
+                      <ForumActionButton
+                        kind="kick"
+                        payload={{ target: m.id, body: m.name }}
+                        label="🗳️ Depose"
+                        tone="danger"
+                        size="xs"
+                        reload={false}
+                      />
+                    ))
+                    : (canKick && (
+                      <ForumActionButton
+                        kind="kick"
+                        payload={{ target: m.id, body: m.name }}
+                        label="Kick"
+                        tone="danger"
+                        size="xs"
+                        reload={false}
+                      />
+                    ))
                 )}
               </li>
             );
           })}
         </ul>
+        {canManageRanks && (
+          <p class="mt-2 text-[11px] text-slate-500">
+            🗳️ Deposing a guildmaster isn't unilateral — a{" "}
+            <span class="text-amber-200">majority of the council</span>{" "}
+            must vote them out (OpenFGA enforces the <code>can_remove</code>
+            {" "}
+            gate; the app tallies the votes). Try it — the server refuses.
+          </p>
+        )}
       </section>
 
       {(canManageRanks || canDisband) && (

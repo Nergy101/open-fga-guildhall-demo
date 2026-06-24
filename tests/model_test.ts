@@ -36,10 +36,12 @@ const MATRIX: [
   ["guild:ironforge", "can_edit_motd", undefined, [T, T, F, F, F, F, F]],
   ["guild:ironforge", "can_manage_ranks", undefined, [T, F, F, F, F, F, F]],
   ["guild:ironforge", "can_disband", undefined, [T, F, F, F, F, F, F]],
-  // Allied guild Orgrimmar: only Medivh (its officer) has any access here
+  // Allied guild Orgrimmar: only Medivh (its guildmaster) has access here — and
+  // as GM he can manage ranks and disband his own guild.
   ["guild:orgrimmar", "can_read", undefined, [F, F, F, F, F, T, F]],
   ["guild:orgrimmar", "can_invite", undefined, [F, F, F, F, F, T, F]],
-  ["guild:orgrimmar", "can_manage_ranks", undefined, [F, F, F, F, F, F, F]],
+  ["guild:orgrimmar", "can_manage_ranks", undefined, [F, F, F, F, F, T, F]],
+  ["guild:orgrimmar", "can_disband", undefined, [F, F, F, F, F, T, F]],
   // Vault: parent-child + ABAC (default 250g)
   ["vault:ironforge_bank", "can_view", undefined, [T, T, T, T, F, F, F]],
   ["vault:ironforge_bank", "can_deposit", { requested_amount: 250 }, [
@@ -140,6 +142,9 @@ const MATRIX: [
   // Orgrimmar's own board: only its members (Medivh) can read or post
   ["channel:orgrimmar_hall", "can_read", undefined, [F, F, F, F, F, T, F]],
   ["channel:orgrimmar_hall", "can_post", undefined, [F, F, F, F, F, T, F]],
+  // Guild Council: the motion to depose Magni hasn't passed (1 of 3 votes), so
+  // the can_remove gate is closed for everyone until a majority votes.
+  ["kick_motion:depose_magni", "can_remove", undefined, [F, F, F, F, F, F, F]],
 ];
 
 Deno.test("access matrix matches the design for every persona", async (t) => {
@@ -369,7 +374,7 @@ Deno.test("ListObjects returns the right channels per persona", async () => {
 });
 
 Deno.test("batchCheck chunks >50 checks correctly", async () => {
-  // 7 personas x 51 actions = 357 checks, well over the 50/request cap.
+  // 7 personas × the full catalog action set — well over the 50/request cap.
   const items = PERSONAS.flatMap((p) =>
     buildItems(p, personaUser(p), { currentTime: DURING })
   );
@@ -384,4 +389,60 @@ Deno.test("batchCheck chunks >50 checks correctly", async () => {
   assertEquals(results[checkId("guest", "general", "read")], false);
   assertEquals(results[checkId("jaina", "bwl", "loot")], true);
   assertEquals(results[checkId("jaina", "raid", "loot")], false);
+});
+
+Deno.test("guild council: a majority vote gates guildmaster removal", async () => {
+  // Every guild has a guildmaster — Medivh leads Orgrimmar.
+  assertEquals(
+    await check({
+      user: "user:medivh",
+      relation: "guildmaster",
+      object: "guild:orgrimmar",
+    }),
+    true,
+  );
+  // A guild may have several: Ironforge's council is Thrall, Magni and Muradin.
+  for (const gm of ["thrall", "magni", "muradin"]) {
+    assertEquals(
+      await check({
+        user: `user:${gm}`,
+        relation: "guildmaster",
+        object: "guild:ironforge",
+      }),
+      true,
+    );
+  }
+  // The seeded motion to depose Magni has only Thrall's vote (1 of 3) — short of
+  // a majority — so the can_remove gate is closed.
+  assertEquals(
+    await check({
+      user: "user:thrall",
+      relation: "can_remove",
+      object: "kick_motion:depose_magni",
+    }),
+    false,
+  );
+  // Add Muradin's vote → a majority (2 of 3). OpenFGA can't count, so the app
+  // grants `passed`; modelled here with contextual tuples (no store write).
+  // OpenFGA then enforces the gate, so can_remove flips to true.
+  assertEquals(
+    await check({
+      user: "user:thrall",
+      relation: "can_remove",
+      object: "kick_motion:depose_magni",
+      contextualTuples: [
+        {
+          user: "user:muradin",
+          relation: "vote",
+          object: "kick_motion:depose_magni",
+        },
+        {
+          user: "user:*",
+          relation: "passed",
+          object: "kick_motion:depose_magni",
+        },
+      ],
+    }),
+    true,
+  );
 });

@@ -5,6 +5,7 @@ import CooldownTimers from "@/islands/CooldownTimers.tsx";
 import RankLadderLab from "@/islands/RankLadderLab.tsx";
 import BanToggleLab from "@/islands/BanToggleLab.tsx";
 import ReachabilityLab from "@/islands/ReachabilityLab.tsx";
+import CouncilLab from "@/islands/CouncilLab.tsx";
 
 export default define.page(function Labs() {
   return (
@@ -78,6 +79,20 @@ export default define.page(function Labs() {
           </p>
         </div>
         <ReachabilityLab />
+      </section>
+
+      <section class="space-y-3">
+        <div>
+          <h2 class="text-lg font-bold text-amber-100">🗳️ Guild Council Lab</h2>
+          <p class="text-sm text-slate-400">
+            A{" "}
+            <strong>majority vote</strong>, which OpenFGA can't express — it
+            can't count. Three guildmasters; deposing one needs 2 of 3. Cast
+            Muradin's vote and watch the app grant <code>passed</code>{" "}
+            so OpenFGA's <code>can_remove</code> gate opens.
+          </p>
+        </div>
+        <CouncilLab />
       </section>
     </div>
   );

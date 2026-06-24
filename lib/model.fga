@@ -107,6 +107,20 @@ type channel
     define can_post: poster
     define can_moderate: moderator
 
+# ── Guild Council (majority vote) ──────────────────────────────────────────────
+# OpenFGA can't COUNT, so it can't natively express "a majority of guildmasters".
+# A motion to depose a guildmaster collects one `vote` tuple per guildmaster; the
+# app tallies those votes against the guild's guildmasters and grants `passed`
+# once a majority agrees. OpenFGA then enforces the gate: a guildmaster may only
+# be removed when the motion has `passed` (`can_remove`).
+type kick_motion
+  relations
+    define guild: [guild]
+    define target: [user]
+    define vote: [user]
+    define passed: [user:*]
+    define can_remove: passed
+
 # ── Conditions (ABAC) ────────────────────────────────────────────────────────
 condition within_signup_window(current_time: timestamp, opens_at: timestamp, closes_at: timestamp) {
   current_time >= opens_at && current_time < closes_at

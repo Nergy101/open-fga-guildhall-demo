@@ -195,80 +195,91 @@ export default define.page<typeof handler>(function Dashboard({ data, state }) {
           if (cards.length === 0) return null;
 
           return (
-            <section key={g.key}>
-              <div class="mb-3 border-b border-slate-800 pb-1.5">
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-amber-200/90">
+            <details
+              key={g.key}
+              open
+              class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/30"
+            >
+              <summary class="flex cursor-pointer select-none flex-col gap-0.5 border-b border-slate-800 px-4 py-3 hover:bg-slate-900/50">
+                <span class="text-sm font-semibold uppercase tracking-wide text-amber-200/90">
                   {g.title}
-                </h2>
-                <p class="text-xs text-slate-500">{g.subtitle}</p>
-              </div>
+                </span>
+                <span class="text-xs font-normal text-slate-500">
+                  {g.subtitle}
+                </span>
+              </summary>
+              <div class="space-y-4 px-4 py-4">
+                <p class="text-xs leading-relaxed text-slate-400">
+                  {g.description}
+                </p>
 
-              {g.key === "bank"
-                ? (
-                  <div class="space-y-4">
-                    {cards.filter((r) => r.type === "vault").map((v) => (
-                      <VaultPanel
-                        key={v.key}
-                        vault={v}
-                        tabs={cards.filter(
-                          (r) =>
-                            r.type === "vault_tab" && r.parent === v.object,
-                        )}
-                        results={results}
-                        user={user}
-                        personaId={personaId}
-                      />
-                    ))}
-                  </div>
-                )
-                : g.key === "channels"
-                ? (
-                  <div class="space-y-5">
-                    {CHANNEL_SCOPES.map((sc) => {
-                      const chans = cards.filter((r) =>
-                        sc.objects.includes(r.object)
-                      );
-                      if (chans.length === 0) return null;
-                      return (
-                        <div key={sc.key}>
-                          <div class="mb-2 flex flex-wrap items-baseline gap-x-2 border-l-2 border-amber-400/40 pl-2">
-                            <h3 class="text-sm font-semibold text-amber-200/90">
-                              {sc.title}
-                            </h3>
-                            <span class="text-[11px] text-slate-500">
-                              {sc.subtitle}
-                            </span>
+                {g.key === "bank"
+                  ? (
+                    <div class="space-y-4">
+                      {cards.filter((r) => r.type === "vault").map((v) => (
+                        <VaultPanel
+                          key={v.key}
+                          vault={v}
+                          tabs={cards.filter(
+                            (r) =>
+                              r.type === "vault_tab" && r.parent === v.object,
+                          )}
+                          results={results}
+                          user={user}
+                          personaId={personaId}
+                        />
+                      ))}
+                    </div>
+                  )
+                  : g.key === "channels"
+                  ? (
+                    <div class="space-y-5">
+                      {CHANNEL_SCOPES.map((sc) => {
+                        const chans = cards.filter((r) =>
+                          sc.objects.includes(r.object)
+                        );
+                        if (chans.length === 0) return null;
+                        return (
+                          <div key={sc.key}>
+                            <div class="mb-2 flex flex-wrap items-baseline gap-x-2 border-l-2 border-amber-400/40 pl-2">
+                              <h3 class="text-sm font-semibold text-amber-200/90">
+                                {sc.title}
+                              </h3>
+                              <span class="text-[11px] text-slate-500">
+                                {sc.subtitle}
+                              </span>
+                            </div>
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                              {chans.map((r) => (
+                                <ResourceCard
+                                  key={r.key}
+                                  r={r}
+                                  results={results}
+                                  user={user}
+                                  personaId={personaId}
+                                />
+                              ))}
+                            </div>
                           </div>
-                          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {chans.map((r) => (
-                              <ResourceCard
-                                key={r.key}
-                                r={r}
-                                results={results}
-                                user={user}
-                                personaId={personaId}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-                : (
-                  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {cards.map((r) => (
-                      <ResourceCard
-                        key={r.key}
-                        r={r}
-                        results={results}
-                        user={user}
-                        personaId={personaId}
-                      />
-                    ))}
-                  </div>
-                )}
-            </section>
+                        );
+                      })}
+                    </div>
+                  )
+                  : (
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {cards.map((r) => (
+                        <ResourceCard
+                          key={r.key}
+                          r={r}
+                          results={results}
+                          user={user}
+                          personaId={personaId}
+                        />
+                      ))}
+                    </div>
+                  )}
+              </div>
+            </details>
           );
         })}
       </div>

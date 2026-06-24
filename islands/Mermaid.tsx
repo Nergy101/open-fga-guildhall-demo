@@ -4,7 +4,9 @@ import { useSignal } from "@preact/signals";
 let initialized = false;
 
 /** Renders a Mermaid diagram definition to SVG (client-side only). */
-export default function Mermaid({ chart, id }: { chart: string; id: string }) {
+export default function Mermaid(
+  { chart, id, fill }: { chart: string; id: string; fill?: boolean },
+) {
   const ref = useRef<HTMLDivElement>(null);
   const error = useSignal<string | null>(null);
 
@@ -26,7 +28,18 @@ export default function Mermaid({ chart, id }: { chart: string; id: string }) {
           initialized = true;
         }
         const { svg } = await mermaid.render(`mmd-${id}`, chart);
-        if (!cancelled && ref.current) ref.current.innerHTML = svg;
+        if (!cancelled && ref.current) {
+          ref.current.innerHTML = svg;
+          // Let the diagram grow to fill the card width (bigger, easier to read).
+          if (fill) {
+            const el = ref.current.querySelector("svg");
+            if (el) {
+              el.style.maxWidth = "100%";
+              el.style.width = "100%";
+              el.style.height = "auto";
+            }
+          }
+        }
       } catch (e) {
         if (!cancelled) {
           error.value = e instanceof Error ? e.message : String(e);

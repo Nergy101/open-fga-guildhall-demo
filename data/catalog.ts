@@ -31,6 +31,8 @@ export interface ResourceGroup {
   key: string;
   title: string;
   subtitle: string;
+  /** A paragraph describing what the section demonstrates (shown on the dashboard). */
+  description: string;
   /** Resource `type`s that belong to this section. */
   types: string[];
 }
@@ -41,24 +43,32 @@ export const GROUPS: ResourceGroup[] = [
     key: "guild",
     title: "The Guild",
     subtitle: "Rank ladder & blocklist",
+    description:
+      "The guild itself — a concentric rank ladder (guildmaster ▸ officer ▸ raider ▸ recruit) where each rank inherits the powers below it, minus a blocklist. Reading, inviting, kicking, editing the MOTD, managing ranks and disbanding each unlock at a different rank. The allied guild Orgrimmar shows the same model from an outsider's point of view.",
     types: ["guild"],
   },
   {
     key: "bank",
     title: "Guild Bank",
     subtitle: "Vaults & tabs — parent ▸ child hierarchy + ABAC gold caps",
+    description:
+      "The guild bank: a three-level parent ▸ child hierarchy where tabs inherit from their vault, which belongs to the guild. Deposits and withdrawals are gated by an ABAC gold cap — officers move gold freely, members only up to a per-grant limit — and a cooldown holds members to one withdrawal per window.",
     types: ["vault", "vault_tab"],
   },
   {
     key: "raids",
     title: "Guild Raids",
     subtitle: "Attendance-based, some shared with the alliance",
+    description:
+      "Raids gate loot on the INTERSECTION of attendance and raider rank, and sign-ups on a time-boxed ABAC window. One raid is shared with the alliance, so members of any allied guild can view, sign up and roll loot — while the blocklist still shuts out banned attendees.",
     types: ["raid"],
   },
   {
     key: "channels",
     title: "Channels",
     subtitle: "Groups, nested groups & public access",
+    description:
+      "Chat channels showcase OpenFGA's group features: members-only and officers-only boards via usersets, a public board open to everyone (user:*), an alliance-wide hall reached through a nested group, and the allied guild's own private board.",
     types: ["channel"],
   },
 ];
@@ -154,7 +164,7 @@ export const RESOURCES: Resource[] = [
     object: "guild:orgrimmar",
     type: "guild",
     blurb:
-      "The allied guild in the Azeroth Pact. Medivh is an officer here — so he runs Orgrimmar, even though he's a stranger inside Ironforge.",
+      "The allied guild in the Azeroth Pact. Medivh is its guildmaster — full authority over Orgrimmar, even though he's a stranger inside Ironforge.",
     actions: [
       {
         key: "read",
@@ -184,7 +194,13 @@ export const RESOURCES: Resource[] = [
         key: "ranks",
         label: "Manage ranks",
         relation: "can_manage_ranks",
-        concept: "rank: guildmaster (none seeded)",
+        concept: "rank: guildmaster",
+      },
+      {
+        key: "disband",
+        label: "Disband guild",
+        relation: "can_disband",
+        concept: "rank: guildmaster",
       },
     ],
   },

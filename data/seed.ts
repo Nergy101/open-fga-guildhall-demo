@@ -52,6 +52,10 @@ export const TUPLES: SeedTuple[] = [
 
   // ── Ironforge ranks (the main guild) ─────────────────────────────────────
   { user: "user:thrall", relation: "guildmaster", object: "guild:ironforge" },
+  // A guild may have several guildmasters; deposing one needs a majority vote
+  // of the council (see `kick_motion` below). Magni & Muradin co-lead Ironforge.
+  { user: "user:magni", relation: "guildmaster", object: "guild:ironforge" },
+  { user: "user:muradin", relation: "guildmaster", object: "guild:ironforge" },
   { user: "user:jaina", relation: "officer", object: "guild:ironforge" },
   { user: "user:arthas", relation: "raider", object: "guild:ironforge" },
   { user: "user:rexxar", relation: "recruit", object: "guild:ironforge" },
@@ -60,7 +64,8 @@ export const TUPLES: SeedTuple[] = [
   { user: "user:guldan", relation: "banned", object: "guild:ironforge" },
 
   // ── Orgrimmar (allied guild) ─────────────────────────────────────────────
-  { user: "user:medivh", relation: "officer", object: "guild:orgrimmar" },
+  // Every guild has at least one guildmaster — Medivh leads Orgrimmar.
+  { user: "user:medivh", relation: "guildmaster", object: "guild:orgrimmar" },
 
   // ── Vault + tab ──────────────────────────────────────────────────────────
   {
@@ -261,4 +266,22 @@ export const TUPLES: SeedTuple[] = [
     relation: "poster",
     object: "channel:orgrimmar_hall",
   },
+
+  // ── Guild Council: a motion to depose a guildmaster ──────────────────────
+  // OpenFGA can't COUNT, so "a majority of guildmasters" lives in the app: it
+  // tallies these `vote` tuples against the guild's guildmasters and grants
+  // `passed` once a majority agrees. OpenFGA enforces the gate (`can_remove:
+  // passed`). Here a motion to depose Magni has 1 of 3 votes — short of the
+  // majority (2), so no `passed` tuple is written and `can_remove` stays false.
+  {
+    user: "guild:ironforge",
+    relation: "guild",
+    object: "kick_motion:depose_magni",
+  },
+  {
+    user: "user:magni",
+    relation: "target",
+    object: "kick_motion:depose_magni",
+  },
+  { user: "user:thrall", relation: "vote", object: "kick_motion:depose_magni" },
 ];

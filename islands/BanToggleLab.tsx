@@ -14,9 +14,11 @@ import { Badge } from "@/components/Badge.tsx";
 
 const GUILD = "guild:ironforge";
 
-// Personas seeded as un-banned Ironforge members. (Gul'dan is already banned in
-// the store; contextual tuples can only add, so toggling him off wouldn't work.)
-const SUBJECTS = ["thrall", "jaina", "arthas", "rexxar"] as const;
+// Ironforge members. The first four are un-banned (toggle the hypothetical ban
+// on them); Gul'dan is *already* banned in the store, so switching to him shows
+// the real exclusion — his member perks are denied with no contextual tuple.
+const SUBJECTS = ["thrall", "jaina", "arthas", "rexxar", "guldan"] as const;
+const REALLY_BANNED = "guldan";
 
 interface Perk {
   id: string;
@@ -76,7 +78,8 @@ export default function BanToggleLab() {
 
   async function refresh() {
     const user = personaUser(subject.value);
-    const contextualTuples = banned.value
+    // Gul'dan is already banned in the store — no contextual tuple needed.
+    const contextualTuples = banned.value && subject.value !== REALLY_BANNED
       ? [{ user, relation: "banned", object: GUILD }]
       : undefined;
     results.value = await runChecks(ALL.map((p) => ({
@@ -93,6 +96,7 @@ export default function BanToggleLab() {
   }, []);
 
   const persona = getPersona(subject.value);
+  const reallyBanned = subject.value === REALLY_BANNED;
 
   return (
     <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
@@ -111,6 +115,7 @@ export default function BanToggleLab() {
               type="button"
               onClick={() => {
                 subject.value = id;
+                banned.value = false;
                 refresh();
               }}
               class={`rounded-md border px-2.5 py-1.5 text-xs transition-colors ${
@@ -127,16 +132,20 @@ export default function BanToggleLab() {
         <div class="ml-auto flex items-center gap-2">
           <span
             class={`rounded-md border px-2.5 py-1 text-xs font-semibold ${
-              banned.value
+              banned.value || reallyBanned
                 ? "border-rose-500 bg-rose-500/20 text-rose-200"
                 : "border-emerald-600 bg-emerald-500/15 text-emerald-200"
             }`}
           >
-            {banned.value ? "☠️ Banned" : "✓ In good standing"}
+            {reallyBanned
+              ? "☠️ Banned (in the store)"
+              : banned.value
+              ? "☠️ Banned"
+              : "✓ In good standing"}
           </span>
           <button
             type="button"
-            disabled={banned.value}
+            disabled={banned.value || reallyBanned}
             onClick={() => {
               banned.value = true;
               refresh();
@@ -147,7 +156,7 @@ export default function BanToggleLab() {
           </button>
           <button
             type="button"
-            disabled={!banned.value}
+            disabled={!banned.value || reallyBanned}
             onClick={() => {
               banned.value = false;
               refresh();
@@ -161,8 +170,9 @@ export default function BanToggleLab() {
 
       <p class="mt-3 text-[11px] text-slate-500">
         <span class="text-amber-200">{persona.emoji} {persona.name}</span>{" "}
-        ({persona.role}) ·{" "}
-        {banned.value ? "on the blocklist" : "member in good standing"}
+        ({persona.role}) · {banned.value || reallyBanned
+          ? "on the blocklist"
+          : "member in good standing"}
       </p>
 
       <div class="mt-2 space-y-2">

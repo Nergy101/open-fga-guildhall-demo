@@ -19,7 +19,9 @@ function label(object: string): string {
 
 function persona(user: string): { emoji: string; name: string } {
   const p = PERSONAS.find((x) => `user:${x.id}` === user);
-  return p ? { emoji: p.emoji, name: p.name } : { emoji: "👤", name: user };
+  if (p) return { emoji: p.emoji, name: p.name };
+  const raw = user.replace(/^user:/, "");
+  return { emoji: "👑", name: raw.charAt(0).toUpperCase() + raw.slice(1) };
 }
 
 function audience(userset: string): string {
@@ -28,12 +30,24 @@ function audience(userset: string): string {
   const m = userset.match(/^guild:([^#]+)#(\w+)/);
   if (!m) return userset;
   const guild = m[1][0].toUpperCase() + m[1].slice(1);
-  return `${m[2]}s of ${guild}`;
+  const byRank: Record<string, string> = {
+    member: `✅ members of ${guild}`,
+    recruit: `🌱 recruits+ of ${guild}`,
+    raider: `⚔️ raiders+ of ${guild}`,
+    officer: `🛡️ officers+ of ${guild}`,
+    guildmaster: `👑 guildmaster of ${guild}`,
+  };
+  // The "+" marks concentric ranks: a higher rank inherits the access.
+  return byRank[m[2]] ?? `${m[2]}s of ${guild}`;
 }
 
-/** Alliance ▸ guilds ▸ members (with ranks; banned highlighted). */
+/** Alliance ▸ guilds ▸ members (with ranks; banned highlighted). Laid out left
+ * to right so members stack vertically — taller and easier to read. */
 export function guildsChart(): string {
-  const lines = ["graph TD"];
+  const lines = [
+    `%%{init: {"themeVariables": {"fontSize": "16px"}, "flowchart": {"nodeSpacing": 26, "rankSpacing": 110}}}%%`,
+    "graph LR",
+  ];
   for (const t of TUPLES) {
     if (t.relation === "guild" && t.object.startsWith("alliance:")) {
       lines.push(
@@ -90,45 +104,101 @@ export function bankChart(): string {
   return lines.join("\n");
 }
 
-/** Guild / alliance ▸ raids ▸ attendees. */
+/** Owning guild ▸ raids ▸ attendees — attendees tagged with their guild, and
+ * alliance-shared raids shown opening to every allied guild. */
 export function raidsChart(): string {
-  const lines = ["graph TD"];
+  const lines = [
+    `%%{init: {"themeVariables": {"fontSize": "15px"}, "flowchart": {"nodeSpacing": 35, "rankSpacing": 55}}}%%`,
+    "graph TD",
+  ];
+  // Which guild each user belongs to (from their rank tuple).
+  const userGuild = new Map<string, string>();
+  for (const t of TUPLES) {
+    if (
+      RANKS.includes(t.relation) && t.object.startsWith("guild:") &&
+      t.user.startsWith("user:") && !userGuild.has(t.user)
+    ) {
+      const g = t.object.replace("guild:", "");
+      userGuild.set(t.user, g.charAt(0).toUpperCase() + g.slice(1));
+    }
+  }
+  const allianceGuilds = TUPLES
+    .filter((t) => t.relation === "guild" && t.object.startsWith("alliance:"))
+    .map((t) => t.user);
+  // Owning guild ▸ raid.
   for (const t of TUPLES) {
     if (t.relation === "guild" && t.object.startsWith("raid:")) {
       lines.push(
-        `  ${id(t.user)}["${label(t.user)}"] --> ${id(t.object)}["${
-          label(t.object)
-        }"]`,
-      );
-    }
-    if (t.relation === "alliance" && t.object.startsWith("raid:")) {
-      lines.push(
-        `  ${id(t.user)}["${label(t.user)}"] -. shared .-> ${id(t.object)}["${
+        `  ${id(t.user)}["${label(t.user)}"] -->|owns| ${id(t.object)}["${
           label(t.object)
         }"]`,
       );
     }
   }
+  // Alliance-shared raids: the pact and every *other* allied guild can join.
+  for (const t of TUPLES) {
+    if (t.relation === "alliance" && t.object.startsWith("raid:")) {
+      lines.push(
+        `  ${id(t.user)}["${label(t.user)}"] -. shared .-> ${id(t.object)}`,
+      );
+      const owner = TUPLES.find((x) =>
+        x.relation === "guild" && x.object === t.object
+      )?.user;
+      for (const g of allianceGuilds) {
+        if (g !== owner) {
+          lines.push(
+            `  ${id(t.object)} -. open to .-> ${id(g)}["${label(g)}"]`,
+          );
+        }
+      }
+    }
+  }
+  // Attendees, tagged with their guild (so Medivh clearly reads as Orgrimmar).
   for (const t of TUPLES) {
     if (t.relation === "attendee" && t.user.startsWith("user:")) {
       const p = persona(t.user);
+      const g = userGuild.get(t.user);
       const node = `att_${id(t.user)}_${id(t.object)}`;
       lines.push(
-        `  ${id(t.object)} -. attended .-> ${node}(["${p.emoji} ${p.name}"])`,
+        `  ${id(t.object)} -. attended .-> ${node}(["${p.emoji} ${p.name}${
+          g ? ` · ${g}` : ""
+        }"])`,
       );
     }
   }
   return lines.join("\n");
 }
 
-/** Channel ▸ who may read it. */
+/** Guild ▸ its channels ▸ the rank needed to read / post. */
 export function channelsChart(): string {
-  const lines = ["graph LR"];
+  const lines = [
+    `%%{init: {"themeVariables": {"fontSize": "15px"}, "flowchart": {"nodeSpacing": 30, "rankSpacing": 55}}}%%`,
+    "graph TD",
+  ];
+  // Owning guild ▸ channel.
+  const owner = new Map<string, string>();
+  for (const t of TUPLES) {
+    if (t.relation === "guild" && t.object.startsWith("channel:")) {
+      owner.set(t.object, t.user);
+    }
+  }
+  for (const [chan, g] of owner) {
+    lines.push(
+      `  ${id(g)}["${label(g)}"] -->|owns| ${id(chan)}["${label(chan)}"]`,
+    );
+  }
+  // Each channel ▸ the audience (rank, or higher) that may read / post.
   for (const t of TUPLES) {
     if (t.relation === "viewer" && t.object.startsWith("channel:")) {
-      const aud = `aud_${id(t.user)}`;
       lines.push(
-        `  ${id(t.object)}["${label(t.object)}"] --> ${aud}{{"${
+        `  ${id(t.object)} -->|"👁️ read"| ${id(t.object)}_v_${id(t.user)}{{"${
+          audience(t.user)
+        }"}}`,
+      );
+    }
+    if (t.relation === "poster" && t.object.startsWith("channel:")) {
+      lines.push(
+        `  ${id(t.object)} -->|"✍️ post"| ${id(t.object)}_p_${id(t.user)}{{"${
           audience(t.user)
         }"}}`,
       );

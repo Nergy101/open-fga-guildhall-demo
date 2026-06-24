@@ -15,33 +15,39 @@ OpenFGA server**.
 The authorization model (`lib/model.fga`) is deliberately broad — it exercises
 every major OpenFGA feature:
 
-| Feature                               | Where                                                                           |
-| ------------------------------------- | ------------------------------------------------------------------------------- |
-| Concentric roles (rank ladder)        | `guild`: guildmaster ▸ officer ▸ raider ▸ recruit                               |
-| Blocklist (`but not`)                 | `guild.member: recruit but not banned`                                          |
-| Parent → child → grandchild hierarchy | `vault_tab` ▸ `vault` ▸ `guild`                                                 |
-| Usersets / groups                     | `guild#officer`, `guild#member` on channels                                     |
-| Nested groups (userset of usersets)   | `alliance.member: member from guild`                                            |
-| Public access                         | `channel:tavern_board` viewer `user:*`                                          |
-| Intersection (`and`)                  | `raid.can_loot: attendee and raider from guild`                                 |
-| Union across sources (`or`)           | `raid.can_view: member from guild or member from alliance`                      |
-| Exclusion overrides attendance        | `raid.can_view_tactics: (attendee or leader) but not banned`                    |
-| Cross-org sharing (alliance raids)    | allied guilds' members view, sign up, and roll loot on shared raids             |
-| ABAC condition (numeric)              | `withdrawal_within_limit` on the vault                                          |
-| ABAC condition (temporal)             | `within_signup_window` on the raid                                              |
-| ABAC time-based cooldown              | `cooldown_elapsed` — one withdrawal per window (app supplies `last_withdrawal`) |
+| Feature                               | Where                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------- |
+| Concentric roles (rank ladder)        | `guild`: guildmaster ▸ officer ▸ raider ▸ recruit                                     |
+| Blocklist (`but not`)                 | `guild.member: recruit but not banned`                                                |
+| Parent → child → grandchild hierarchy | `vault_tab` ▸ `vault` ▸ `guild`                                                       |
+| Usersets / groups                     | `guild#officer`, `guild#member` on channels                                           |
+| Nested groups (userset of usersets)   | `alliance.member: member from guild`                                                  |
+| Public access                         | `channel:tavern_board` viewer `user:*`                                                |
+| Intersection (`and`)                  | `raid.can_loot: attendee and raider from guild`                                       |
+| Union across sources (`or`)           | `raid.can_view: member from guild or member from alliance`                            |
+| Exclusion overrides attendance        | `raid.can_view_tactics: (attendee or leader) but not banned`                          |
+| Cross-org sharing (alliance raids)    | allied guilds' members view, sign up, and roll loot on shared raids                   |
+| ABAC condition (numeric)              | `withdrawal_within_limit` on the vault                                                |
+| ABAC condition (temporal)             | `within_signup_window` on the raid                                                    |
+| ABAC time-based cooldown              | `cooldown_elapsed` — one withdrawal per window (app supplies `last_withdrawal`)       |
+| Majority vote (app-tallied)           | `kick_motion`: deposing a guildmaster needs a council majority (`can_remove: passed`) |
 
 ### Personas
 
-|    | Persona                                    | Access                                                                      |
-| -- | ------------------------------------------ | --------------------------------------------------------------------------- |
-| 👑 | **Thrall** — Guildmaster                   | everything                                                                  |
-| 🛡️ | **Jaina** — Officer                        | manage members + bank, lead raids                                           |
-| ⚔️ | **Arthas** — Raider                        | deposit, withdraw ≤ 500g, sign up                                           |
-| 🌱 | **Rexxar** — Recruit                       | can't manage; can sign up + withdraw ≤ 100g                                 |
-| ☠️ | **Gul'dan** — Banned                       | member perks revoked; public board still readable                           |
-| 🤝 | **Medivh** — Officer of Orgrimmar (allied) | runs his own guild; in Ironforge only the Pact hall + alliance-shared raids |
-| 🚶 | **Wandering Adventurer** — Guest           | only the public tavern board                                                |
+|    | Persona                                        | Access                                                                       |
+| -- | ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| 👑 | **Thrall** — Guildmaster                       | everything                                                                   |
+| 🛡️ | **Jaina** — Officer                            | manage members + bank, lead raids                                            |
+| ⚔️ | **Arthas** — Raider                            | deposit, withdraw ≤ 500g, sign up                                            |
+| 🌱 | **Rexxar** — Recruit                           | can't manage; can sign up + withdraw ≤ 100g                                  |
+| ☠️ | **Gul'dan** — Banned                           | member perks revoked; public board still readable                            |
+| 🤝 | **Medivh** — Guildmaster of Orgrimmar (allied) | leads his own guild; in Ironforge only the Pact hall + alliance-shared raids |
+| 🚶 | **Wandering Adventurer** — Guest               | only the public tavern board                                                 |
+
+> Ironforge also has two NPC co-guildmasters, **Magni** & **Muradin**. A guild
+> can have several guildmasters, and deposing one takes a **majority council
+> vote** — OpenFGA can't count, so the app tallies the votes and grants the
+> `passed` relation that gates `can_remove` (see the Guild Council Lab).
 
 ## Prerequisites
 
@@ -51,7 +57,7 @@ every major OpenFGA feature:
 ## Run it
 
 ```sh
-# 1. Start OpenFGA (HTTP :8088, gRPC :8089) + Postgres
+# 1. Start OpenFGA (HTTP :8088, gRPC :8089, Playground :4000) + Postgres
 docker compose up -d
 
 # 2. Install deps (first time only)
@@ -66,6 +72,12 @@ deno task dev
 
 > Host ports 8080/8081 are commonly taken (e.g. by SSH tunnels), so OpenFGA's
 > HTTP API is mapped to **:8088**. Override with `FGA_API_URL` if you change it.
+
+> The bundled **OpenFGA Playground** is enabled at
+> **<http://localhost:4000/playground>** — open it to browse and traverse the
+> live `guildhall` store (model + tuples) visually. It needs internet (it embeds
+> play.fga.dev), only runs on `localhost`, and per OpenFGA's docs shows up to
+> 100 tuples and skips conditional/contextual ones.
 
 ### Verify
 
@@ -83,10 +95,10 @@ deno task test     # asserts the entire access matrix against the live server
   difference: Thrall runs the guild; Gul'dan (banned) sees only the public
   Tavern board; Medivh (allied) reaches the shared raid and can roll loot; a
   Guest barely gets in the door.
-- **Dashboard** (`/`) — resource cards grouped into sections (The Guild, Guild
-  Bank, Guild Raids, Channels), each with a live access badge per action. Vaults
-  render as panels with their tabs nested inside, so the vault ▸ tab hierarchy
-  is visible at a glance.
+- **Dashboard** (`/`) — resource cards grouped into **collapsible sections**
+  (The Guild, Guild Bank, Guild Raids, Channels), each with a short description
+  and a live access badge per action. Vaults render as panels with their tabs
+  nested inside, so the vault ▸ tab hierarchy is visible at a glance.
 - **Click any badge** for a popup explaining _why_: the relation's DSL rule, the
   ABAC condition (with the context used), the relevant tuples, and the Expand
   "rules graph" — powered by `/api/explain`.
@@ -97,17 +109,24 @@ deno task test     # asserts the entire access matrix against the live server
   - **🪜 Rank Ladder Lab** — promote a newcomer up the rank ladder (via a
     contextual tuple, no store mutation) and watch permissions unlock in tiers —
     concentric relations made visible.
-  - **☠️ Ban Toggle Lab** — blocklist a member and watch every member-derived
-    perk go dark at once (`member: recruit but not banned`), while the public
-    board stays readable.
+  - **☠️ Ban Toggle Lab** — pick a member and blocklist them: every
+    member-derived perk goes dark at once (`member: recruit but not banned`),
+    while the public board stays readable. Gul'dan is banned in the store, so
+    switching to him flips the badges for real.
   - **🧭 Reachability Lab** — the reverse query: `ListObjects` shows which
     objects each persona can reach for a relation, side by side.
+  - **🗳️ Guild Council Lab** — a **majority vote**, which OpenFGA can't express
+    (it can't count): cast a guildmaster's vote and watch the app tally it and
+    grant `passed`, opening the `can_remove` gate to depose another guildmaster.
 - **Playground** (`/playground`) — run arbitrary queries: **Check**,
   **ListObjects**, **ListUsers** ("who can…?"), **Expand** (the rules graph),
   and **What-if** (a Check against hypothetical contextual tuples — simulate a
   promotion or ban without writing to the store).
 - **Model** (`/model`) — the DSL, all seeded tuples, the persona legend, and the
   store/model ids.
+- **🗺️ Legenda** (`/legenda`) — Mermaid diagrams generated from the seeded
+  tuples: guilds & members, the bank hierarchy, raids & attendance (shared
+  across the alliance), the channel → rank audiences, and the rank ladder.
 
 ## How it fits together
 
@@ -117,6 +136,7 @@ lib/model.fga         the authorization model (DSL, source of truth)
 data/seed.ts          every relationship tuple (incl. conditional/ABAC tuples)
 data/personas.ts      the 7 demo personas
 data/catalog.ts       resources × actions shown in the UI + tests
+data/legenda.ts       Mermaid diagrams generated from the seed (the Legenda page)
 scripts/seed.ts       DSL → JSON, create store, write model + tuples → fga.local.json
 lib/fga.ts            tiny fetch-based client: Check / BatchCheck / ListObjects
 lib/access.ts         builds the (persona × action) check set

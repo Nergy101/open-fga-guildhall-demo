@@ -222,17 +222,38 @@ export const handler = define.handlers({
             status: 400,
           });
         }
-        // Guildmasters cannot be kicked — not even by an officer.
+        // Guildmasters can't be kicked unilaterally — not by an officer, and not
+        // even by another guildmaster. Deposing one needs a council motion that a
+        // *majority* of guildmasters has passed. OpenFGA can't count, so the app
+        // tallies the votes and grants `passed`; OpenFGA enforces `can_remove`.
         const targetIsGm = await check({
           user: `user:${target}`,
           relation: "guildmaster",
           object: GUILD,
         });
         if (targetIsGm) {
-          return Response.json({
-            ok: false,
-            message: "🔒 You can't kick a guildmaster.",
-          }, { status: 403 });
+          const removable = await check({
+            user,
+            relation: "can_remove",
+            object: `kick_motion:depose_${target}`,
+          });
+          if (!removable) {
+            return Response.json({
+              ok: false,
+              message: `🗳️ ${
+                b.body || "A guildmaster"
+              } can't be deposed unilaterally — a majority of the council must vote them out first.`,
+            }, { status: 403 });
+          }
+          // The motion passed; executing it still requires guildmaster rank.
+          relation = "can_manage_ranks";
+          object = GUILD;
+          run = () => ({
+            message: `🗳️ ${
+              b.body || "Guildmaster"
+            } deposed by council vote. (demo — not persisted)`,
+          });
+          break;
         }
         relation = "can_kick";
         object = GUILD;

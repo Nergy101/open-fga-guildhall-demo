@@ -36,7 +36,9 @@ services:
   openfga:
     image: openfga/openfga:latest
     container_name: guildhall-openfga
-    command: run
+    # Host-consistent addrs: the Playground tells the browser to call the API on
+    # the server's own http port, so it must match the published host port.
+    command: run --http-addr=0.0.0.0:8088 --grpc-addr=0.0.0.0:8089 --playground-enabled --playground-addr=0.0.0.0:4000
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -52,9 +54,8 @@ services:
     networks:
       - openfga
     ports:
-      # Host ports 8080/8081/5432 are taken by an ssh tunnel here, so HTTP/gRPC are remapped.
-      - "8088:8080" # HTTP API   -> http://localhost:8088
-      - "8089:8081" # gRPC API
-# OpenFGA's built-in playground binds to 127.0.0.1 *inside* the container
-# (and is deprecated), so a published port can't reach it — use the app's
-# own /playground page instead.
+      # 8080/8081 are taken by an ssh tunnel here, so we use 8088/8089 on both
+      # sides (host:container) — the Playground's browser-side API URL resolves.
+      - "8088:8088" # HTTP API   -> http://localhost:8088
+      - "8089:8089" # gRPC API
+      - "4000:4000" # Playground -> http://localhost:4000/playground

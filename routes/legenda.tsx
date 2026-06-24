@@ -9,13 +9,20 @@ import {
 } from "@/data/legenda.ts";
 
 export default define.page(function Legenda() {
-  const sections = [
+  const sections: {
+    id: string;
+    title: string;
+    desc: string;
+    chart: string;
+    fill?: boolean;
+  }[] = [
     {
       id: "guilds",
       title: "🏰 Guilds, alliance & members",
       desc:
-        "Ironforge and allied Orgrimmar both belong to the Azeroth Pact. Each guild's members are shown with their rank — Gul'dan is on the blocklist.",
+        "Ironforge and allied Orgrimmar both belong to the Azeroth Pact. Each guild's members appear with their rank — Ironforge has three guildmasters (a majority must vote to depose one), Medivh leads Orgrimmar, and Gul'dan is on the blocklist.",
       chart: guildsChart(),
+      fill: true,
     },
     {
       id: "bank",
@@ -28,15 +35,17 @@ export default define.page(function Legenda() {
       id: "raids",
       title: "⚔️ Raids & attendance",
       desc:
-        "Raids belong to a guild; Onyxia is shared with the whole alliance. Dotted lines show who actually attended.",
+        "Raids belong to a guild (Ironforge here). Onyxia's Lair is shared with the whole Azeroth Pact, so allied Orgrimmar can join too — that's how Medivh (Orgrimmar) gets in. Dotted lines show who attended, tagged with their guild.",
       chart: raidsChart(),
+      fill: true,
     },
     {
       id: "channels",
       title: "💬 Channels & their audiences",
       desc:
-        "Who can read each board — from the public tavern (user:*) to guild groups, the alliance nested group, and Orgrimmar's own channel.",
+        "Each channel belongs to a guild; the arrows show the rank needed to read or post (concentric — a higher rank inherits it). From the public tavern up to the officers-only war council, plus Orgrimmar's own board.",
       chart: channelsChart(),
+      fill: true,
     },
     {
       id: "ranks",
@@ -63,7 +72,7 @@ export default define.page(function Legenda() {
             <h2 class="text-lg font-bold text-amber-100">{s.title}</h2>
             <p class="text-sm text-slate-400">{s.desc}</p>
           </div>
-          <Mermaid id={s.id} chart={s.chart} />
+          <Mermaid id={s.id} chart={s.chart} fill={s.fill} />
         </section>
       ))}
     </div>
