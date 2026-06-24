@@ -5,7 +5,7 @@ import ExplainModal from "@/islands/ExplainModal.tsx";
 const NAV = [
   { href: "/", label: "Dashboard" },
   { href: "/explorer", label: "Access Matrix" },
-  { href: "/abac-lab", label: "ABAC Lab" },
+  { href: "/labs", label: "Labs" },
   { href: "/playground", label: "Playground" },
   { href: "/model", label: "Model" },
   { href: "/try", label: "Try it out" },
