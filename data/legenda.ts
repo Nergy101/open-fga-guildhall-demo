@@ -108,8 +108,8 @@ export function bankChart(): string {
  * alliance-shared raids shown opening to every allied guild. */
 export function raidsChart(): string {
   const lines = [
-    `%%{init: {"themeVariables": {"fontSize": "15px"}, "flowchart": {"nodeSpacing": 35, "rankSpacing": 55}}}%%`,
-    "graph TD",
+    `%%{init: {"themeVariables": {"fontSize": "16px"}, "flowchart": {"nodeSpacing": 30, "rankSpacing": 90}}}%%`,
+    "graph LR",
   ];
   // Which guild each user belongs to (from their rank tuple).
   const userGuild = new Map<string, string>();
@@ -172,8 +172,8 @@ export function raidsChart(): string {
 /** Guild ▸ its channels ▸ the rank needed to read / post. */
 export function channelsChart(): string {
   const lines = [
-    `%%{init: {"themeVariables": {"fontSize": "15px"}, "flowchart": {"nodeSpacing": 30, "rankSpacing": 55}}}%%`,
-    "graph TD",
+    `%%{init: {"themeVariables": {"fontSize": "16px"}, "flowchart": {"nodeSpacing": 28, "rankSpacing": 90}}}%%`,
+    "graph LR",
   ];
   // Owning guild ▸ channel.
   const owner = new Map<string, string>();
