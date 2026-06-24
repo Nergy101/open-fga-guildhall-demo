@@ -54,7 +54,7 @@ export default function CooldownTimers() {
 
   async function withdraw(id: string) {
     const r = rows.value[id];
-    if (r.busy || r.endsAt > now.value) return;
+    if (r.busy) return;
     rows.value = { ...rows.value, [id]: { ...r, busy: true, note: "" } };
 
     const res = await fetch("/api/lab/cooldown", {
@@ -64,12 +64,17 @@ export default function CooldownTimers() {
     }).then((x) => x.json()).catch(() => ({ ok: false, message: "Failed." }));
 
     const remaining = Number(res.remaining ?? 0);
+    const note = res.ok
+      ? (res.message ?? "✓ Withdrew.")
+      : remaining > 0
+      ? `🔒 Denied — ${Math.ceil(remaining)}s left on cooldown.`
+      : (res.message ?? "🔒 Denied.");
     rows.value = {
       ...rows.value,
       [id]: {
         endsAt: remaining > 0 ? Date.now() + remaining * 1000 : 0,
         busy: false,
-        note: res.message ?? (res.ok ? "✓ Withdrew." : "🔒 Denied."),
+        note,
         noteOk: !!res.ok,
       },
     };
@@ -83,7 +88,8 @@ export default function CooldownTimers() {
         <span class="text-amber-300">{CD}s</span>{" "}
         cooldown, enforced server-side via OpenFGA's{" "}
         <code>can_withdraw_now</code>{" "}
-        — it survives a refresh. An officer has none.
+        — it survives a refresh. Click again mid-cooldown to see it rejected. An
+        officer has none.
       </p>
 
       <div class="mt-3 space-y-2.5">
@@ -107,6 +113,11 @@ export default function CooldownTimers() {
                       · {p.role}
                     </span>
                   </div>
+                  {onCooldown && (
+                    <div class="text-[11px] tabular-nums text-amber-300">
+                      ⏳ {remaining.toFixed(1)}s until ready
+                    </div>
+                  )}
                   {r.note && (
                     <div
                       class={`text-[11px] ${
@@ -119,19 +130,11 @@ export default function CooldownTimers() {
                 </div>
                 <button
                   type="button"
-                  disabled={r.busy || onCooldown}
+                  disabled={r.busy}
                   onClick={() => withdraw(id)}
-                  class={`w-28 shrink-0 rounded-md border px-3 py-1.5 text-xs font-semibold tabular-nums transition-colors ${
-                    onCooldown
-                      ? "border-slate-700 bg-slate-800 text-slate-500"
-                      : "border-amber-400/50 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25 disabled:opacity-50"
-                  }`}
+                  class="w-28 shrink-0 rounded-md border border-amber-400/50 bg-amber-400/15 px-3 py-1.5 text-xs font-semibold text-amber-100 transition-colors hover:bg-amber-400/25 disabled:opacity-50"
                 >
-                  {r.busy
-                    ? "…"
-                    : onCooldown
-                    ? `⏳ ${remaining.toFixed(1)}s`
-                    : "💸 Withdraw"}
+                  {r.busy ? "…" : "💸 Withdraw"}
                 </button>
               </div>
 
