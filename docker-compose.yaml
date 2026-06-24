@@ -45,6 +45,11 @@ services:
       - OPENFGA_DATASTORE_URI=postgres://postgres:password@postgres:5432/openfga?sslmode=disable
       - OPENFGA_LOG_FORMAT=json
       - OPENFGA_PLAYGROUND_ENABLED=true
+      # Cache check sub-results so the dashboard's many overlapping checks hit
+      # memory instead of re-querying Postgres on every page load.
+      - OPENFGA_CHECK_QUERY_CACHE_ENABLED=true
+      - OPENFGA_CHECK_QUERY_CACHE_TTL=30s
+      - OPENFGA_CHECK_ITERATOR_CACHE_ENABLED=true
     networks:
       - openfga
     ports:

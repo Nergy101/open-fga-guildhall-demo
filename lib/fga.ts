@@ -61,14 +61,48 @@ export interface BatchItem extends CheckInput {
   id: string;
 }
 
-/** OpenFGA caps BatchCheck at 50 checks per request. */
-const MAX_BATCH = 50;
+// Batch sizing kept gentle for a small local datastore: a few small requests in
+// flight at a time, never one big parallel burst (which trips OpenFGA's
+// per-request deadline under load).
+const MAX_BATCH = 25;
+const BATCH_CONCURRENCY = 2;
 /** Re-issue checks the server left unanswered (missing/errored) this many times. */
 const MAX_BATCH_ATTEMPTS = 3;
 
 type BatchResultEntry = { allowed?: boolean; error?: unknown };
 
-/** One BatchCheck pass: chunk ≤50, run in parallel, merge by correlation id. */
+/** One BatchCheck request; a failed request (e.g. timeout) yields no answers. */
+async function batchCheckChunk(
+  chunk: BatchItem[],
+  cfg: FgaConfig,
+): Promise<Record<string, BatchResultEntry>> {
+  try {
+    const json = await api<{ result?: Record<string, BatchResultEntry> }>(
+      "/batch-check",
+      {
+        authorization_model_id: cfg.modelId,
+        checks: chunk.map((it) => ({
+          tuple_key: {
+            user: it.user,
+            relation: it.relation,
+            object: it.object,
+          },
+          context: it.context,
+          contextual_tuples: it.contextualTuples
+            ? { tuple_keys: it.contextualTuples }
+            : undefined,
+          correlation_id: it.id,
+        })),
+      },
+      cfg,
+    );
+    return json.result ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/** One pass: chunk into ≤MAX_BATCH, run at most BATCH_CONCURRENCY at a time. */
 async function batchCheckPass(
   items: BatchItem[],
   cfg: FgaConfig,
@@ -77,33 +111,17 @@ async function batchCheckPass(
   for (let i = 0; i < items.length; i += MAX_BATCH) {
     chunks.push(items.slice(i, i + MAX_BATCH));
   }
-  const responses = await Promise.all(
-    chunks.map((chunk) =>
-      api<{ result?: Record<string, BatchResultEntry> }>(
-        "/batch-check",
-        {
-          authorization_model_id: cfg.modelId,
-          checks: chunk.map((it) => ({
-            tuple_key: {
-              user: it.user,
-              relation: it.relation,
-              object: it.object,
-            },
-            context: it.context,
-            contextual_tuples: it.contextualTuples
-              ? { tuple_keys: it.contextualTuples }
-              : undefined,
-            correlation_id: it.id,
-          })),
-        },
-        cfg,
-      )
-    ),
-  );
   const merged: Record<string, BatchResultEntry> = {};
-  for (const json of responses) {
-    for (const [id, r] of Object.entries(json.result ?? {})) merged[id] = r;
+  let next = 0;
+  async function worker() {
+    while (next < chunks.length) {
+      const chunk = chunks[next++];
+      const result = await batchCheckChunk(chunk, cfg);
+      for (const [id, r] of Object.entries(result)) merged[id] = r;
+    }
   }
+  const workers = Math.min(BATCH_CONCURRENCY, chunks.length);
+  await Promise.all(Array.from({ length: workers }, () => worker()));
   return merged;
 }
 
