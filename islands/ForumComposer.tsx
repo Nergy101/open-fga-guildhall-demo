@@ -1,7 +1,13 @@
 import { useSignal } from "@preact/signals";
 
-/** Message composer for a forum channel. Posting is enforced server-side. */
-export default function ForumComposer({ channel }: { channel: string }) {
+/**
+ * Discord-style message bar for a forum channel, pinned to the bottom of the
+ * chat window. Posting is enforced server-side; on success we reload so the new
+ * message (and any freshly-allowed actions) render.
+ */
+export default function ForumComposer(
+  { channel, name }: { channel: string; name?: string },
+) {
   const text = useSignal("");
   const busy = useSignal(false);
   const error = useSignal<string | null>(null);
@@ -26,29 +32,32 @@ export default function ForumComposer({ channel }: { channel: string }) {
   }
 
   return (
-    <div class="mt-3">
-      <div class="flex gap-2">
+    <div>
+      <div class="flex items-center gap-2 rounded-xl border border-slate-700/70 bg-slate-700/25 px-3 py-1.5 transition-colors focus-within:border-amber-400/50">
+        <span class="select-none text-lg leading-none text-slate-500">＋</span>
         <input
           type="text"
           value={text.value}
           disabled={busy.value}
-          placeholder="Write a message…"
+          placeholder={name ? `Message #${name}` : "Write a message…"}
           onInput={(e) => (text.value = (e.target as HTMLInputElement).value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") send();
           }}
-          class="flex-1 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-amber-400/60 focus:outline-none"
+          class="min-w-0 flex-1 bg-transparent py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
         />
         <button
           type="button"
           onClick={send}
-          disabled={busy.value}
-          class="rounded-lg border border-amber-400/50 bg-amber-400/15 px-4 py-2 text-sm font-semibold text-amber-100 transition-colors hover:bg-amber-400/25 disabled:opacity-50"
+          disabled={busy.value || !text.value.trim()}
+          class="shrink-0 rounded-lg border border-amber-400/50 bg-amber-400/15 px-3 py-1.5 text-sm font-semibold text-amber-100 transition-colors hover:bg-amber-400/25 disabled:opacity-40"
         >
-          Post
+          {busy.value ? "…" : "Send"}
         </button>
       </div>
-      {error.value && <p class="mt-2 text-xs text-rose-300">{error.value}</p>}
+      {error.value && (
+        <p class="mt-1 px-1 text-xs text-rose-300">{error.value}</p>
+      )}
     </div>
   );
 }

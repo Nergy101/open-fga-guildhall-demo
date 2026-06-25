@@ -16,6 +16,7 @@ const NAV = [
 export default define.page(function App({ Component, state, url }) {
   const persona = state.persona;
   const bare = url.pathname.startsWith("/forum");
+  const isDashboard = url.pathname === "/";
   // On the forum (the "Try it out" app) the tab title carries the active persona.
   const title = bare && state.forum
     ? `GuildHall · ${state.forum.persona.name}`
@@ -76,18 +77,20 @@ export default define.page(function App({ Component, state, url }) {
                   </nav>
                 </div>
 
-                <div class="mt-3 flex flex-col gap-2 border-t border-slate-800 pt-3">
-                  <div class="flex items-center gap-2 text-xs text-slate-400">
-                    <span>Acting as</span>
-                    <span class="font-mono text-amber-300">
-                      user:{persona.id}
-                    </span>
-                    <span class="text-slate-600">
-                      — switch persona to watch access change:
-                    </span>
+                {isDashboard && (
+                  <div class="mt-3 flex flex-col gap-2 border-t border-slate-800 pt-3">
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                      <span>Acting as</span>
+                      <span class="font-mono text-amber-300">
+                        user:{persona.id}
+                      </span>
+                      <span class="text-slate-600">
+                        — switch persona to watch access change:
+                      </span>
+                    </div>
+                    <PersonaSwitcher current={persona.id} />
                   </div>
-                  <PersonaSwitcher current={persona.id} />
-                </div>
+                )}
               </div>
             </header>
 

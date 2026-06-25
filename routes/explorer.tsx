@@ -86,7 +86,7 @@ export default define.page<typeof handler>(function Explorer({ data }) {
                 <tr class="bg-slate-900/40">
                   <td
                     colspan={PERSONAS.length + 1}
-                    class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-amber-200/80"
+                    class="sticky top-[47px] z-20 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-amber-200/80"
                   >
                     {r.emoji} {r.name}
                   </td>
