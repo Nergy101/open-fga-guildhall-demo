@@ -15,10 +15,12 @@ interface NavItem {
  * via live OpenFGA checks), plus the signed-in identity and a sign-out link.
  */
 export function ForumShell(
-  { forum, active, children }: {
+  { forum, active, children, fill = false }: {
     forum: ForumState;
     active: string;
     children: ComponentChildren;
+    /** Full-bleed, viewport-height main (no centered max-width) — used by the chat-style Channels view. */
+    fill?: boolean;
   },
 ) {
   const { persona, nav } = forum;
@@ -55,7 +57,7 @@ export function ForumShell(
   const visible = items.filter((i) => i.show);
 
   return (
-    <div class="flex min-h-screen">
+    <div class={`flex ${fill ? "h-screen overflow-hidden" : "min-h-screen"}`}>
       <aside class="flex w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-900/70 p-4">
         <div class="flex items-center gap-2">
           <img
@@ -121,9 +123,13 @@ export function ForumShell(
         </div>
       </aside>
 
-      <main class="flex-1 overflow-x-hidden px-6 py-6">
-        <div class="mx-auto max-w-4xl">{children}</div>
-      </main>
+      {fill
+        ? <main class="flex min-w-0 flex-1 overflow-hidden">{children}</main>
+        : (
+          <main class="flex-1 overflow-x-hidden px-6 py-6">
+            <div class="mx-auto max-w-4xl">{children}</div>
+          </main>
+        )}
     </div>
   );
 }

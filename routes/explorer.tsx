@@ -59,17 +59,17 @@ export default define.page<typeof handler>(function Explorer({ data }) {
         </p>
       </section>
 
-      <div class="overflow-x-auto rounded-xl border border-slate-800">
+      <div class="max-h-[78vh] overflow-auto rounded-xl border border-slate-800">
         <table class="w-full border-collapse text-sm">
           <thead>
             <tr class="bg-slate-900/80">
-              <th class="sticky left-0 z-10 bg-slate-900/80 px-3 py-2 text-left font-semibold text-slate-300">
+              <th class="sticky left-0 top-0 z-30 bg-slate-900 px-3 py-2 text-left font-semibold text-slate-300">
                 Action
               </th>
               {PERSONAS.map((p) => (
                 <th
                   key={p.id}
-                  class="px-2 py-2 text-center font-medium text-slate-300"
+                  class="sticky top-0 z-20 bg-slate-900 px-2 py-2 text-center font-medium text-slate-300"
                   title={`${p.name} — ${p.role}`}
                 >
                   <div class="text-lg leading-none">{p.emoji}</div>
