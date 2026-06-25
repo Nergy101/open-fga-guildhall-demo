@@ -2,14 +2,14 @@ import { useEffect, useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 
 /**
- * Live tuple-store node-graph (vis-network), read from OpenFGA's Read API.
- * One node per object/userset, one edge per tuple (labelled by relation).
+ * Live tuple-store node-graph. Reads every tuple from OpenFGA (via /api/tuples →
+ * the Read API) and renders it as an interactive vis-network graph: one node per
+ * object/userset, one edge per tuple (labelled by relation).
  *
- *  - Tree  — hierarchical, layered by node type (UD / LR).
- *  - Force — force-directed with live sliders + Freeze.
- *  - Member regions — translucent hulls behind the users of each guild, so you
- *    can see at a glance who belongs to which group (drawn on the canvas via the
- *    beforeDrawing hook + getPositions).
+ * Two layouts, toggleable live:
+ *  - Tree  — hierarchical, layered by node type, top-down (UD) or left-right (LR);
+ *  - Force — force-directed with live sliders (repulsion, edge length, …) and a
+ *            Freeze button so you can lock it and drag nodes that stay put.
  *
  * vis-network touches the DOM/canvas, so it's imported lazily (client-only).
  */
@@ -34,12 +34,7 @@ const TYPE_COLOR: Record<string, string> = {
 };
 const FALLBACK = "#94a3b8";
 
-// Translucent hull colours for the per-guild membership regions.
-const GROUP_COLORS = ["#22d3ee", "#f59e0b", "#a3e635", "#fb7185", "#c084fc"];
-
-// Concentric rank relations (a user "belongs" to a guild via any of these).
-const RANKS = ["guildmaster", "officer", "raider", "recruit"];
-
+// Tree depth per type: platform ▸ alliance ▸ guild ▸ objects ▸ tabs ▸ users.
 const LEVEL: Record<string, number> = {
   platform: 0,
   alliance: 1,
@@ -53,46 +48,10 @@ const LEVEL: Record<string, number> = {
 };
 
 const typeOf = (id: string) => id.split(":")[0];
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const shortLabel = (id: string) =>
   id === "user:*" ? "everyone (*)" : id.slice(id.indexOf(":") + 1);
 
 type Dir = "UD" | "LR";
-type Pt = { x: number; y: number };
-
-interface Group {
-  label: string;
-  color: string;
-  ids: string[];
-}
-
-// Convex hull (Andrew's monotone chain).
-function hull(pts: Pt[]): Pt[] {
-  if (pts.length < 3) return pts.slice();
-  const p = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y);
-  const cross = (o: Pt, a: Pt, b: Pt) =>
-    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-  const lower: Pt[] = [];
-  for (const q of p) {
-    while (
-      lower.length >= 2 &&
-      cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0
-    ) lower.pop();
-    lower.push(q);
-  }
-  const upper: Pt[] = [];
-  for (let i = p.length - 1; i >= 0; i--) {
-    const q = p[i];
-    while (
-      upper.length >= 2 &&
-      cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0
-    ) upper.pop();
-    upper.push(q);
-  }
-  lower.pop();
-  upper.pop();
-  return lower.concat(upper);
-}
 
 const treeOptions = (dir: Dir) => ({
   layout: {
@@ -122,10 +81,7 @@ const treeOptions = (dir: Dir) => ({
 interface VisNetwork {
   destroy(): void;
   fit(): void;
-  redraw(): void;
-  on(event: string, cb: (ctx: CanvasRenderingContext2D) => void): void;
   once(event: string, cb: () => void): void;
-  getPositions(ids: string[]): Record<string, Pt>;
   setOptions(opts: unknown): void;
 }
 
@@ -139,14 +95,13 @@ export default function TupleGraph() {
   const mode = useSignal<"tree" | "force">("tree");
   const dir = useSignal<Dir>("UD");
   const frozen = useSignal(false);
-  const showGroups = useSignal(true);
-  const groupLegend = useSignal<{ label: string; color: string }[]>([]);
 
-  const repulsion = useSignal(55);
-  const edgeLength = useSignal(130);
-  const stiffness = useSignal(0.08);
-  const centerPull = useSignal(0.01);
-  const spread = useSignal(0.4);
+  // Force-layout knobs (forceAtlas2Based).
+  const repulsion = useSignal(55); // → gravitationalConstant: -repulsion
+  const edgeLength = useSignal(130); // springLength
+  const stiffness = useSignal(0.08); // springConstant
+  const centerPull = useSignal(0.01); // centralGravity
+  const spread = useSignal(0.4); // avoidOverlap
   const damping = useSignal(0.4);
 
   const physicsObj = () => ({
@@ -209,6 +164,7 @@ export default function TupleGraph() {
             id,
             label: shortLabel(id),
             title: id,
+            // Usersets (obj#relation) sit one tier above their base type.
             level: Math.max(0, (LEVEL[type] ?? 3) - (userset ? 1 : 0)),
             shape: userset ? "hexagon" : "dot",
             color: {
@@ -236,31 +192,6 @@ export default function TupleGraph() {
           };
         });
 
-        // Group players by the guild they hold a rank on (one hull per guild).
-        const byGuild = new Map<string, Set<string>>();
-        for (const t of tuples) {
-          if (
-            RANKS.includes(t.relation) && t.object.startsWith("guild:") &&
-            t.user.startsWith("user:")
-          ) {
-            let set = byGuild.get(t.object);
-            if (!set) byGuild.set(t.object, set = new Set());
-            set.add(t.user);
-          }
-        }
-        const groups: Group[] = [...byGuild.entries()].map((
-          [guild, set],
-          i,
-        ) => ({
-          label: `${cap(shortLabel(guild))} members`,
-          color: GROUP_COLORS[i % GROUP_COLORS.length],
-          ids: [...set],
-        }));
-        groupLegend.value = groups.map((g) => ({
-          label: g.label,
-          color: g.color,
-        }));
-
         const mod = await import(
           "vis-network/standalone/esm/vis-network.js"
         ) as {
@@ -273,7 +204,7 @@ export default function TupleGraph() {
         if (cancelled || !ref.current) return;
 
         const init = treeOptions("UD");
-        const network = new mod.Network(ref.current, { nodes, edges }, {
+        net.current = new mod.Network(ref.current, { nodes, edges }, {
           nodes: {
             shape: "dot",
             size: 16,
@@ -300,41 +231,6 @@ export default function TupleGraph() {
           layout: init.layout,
           physics: init.physics,
         });
-        net.current = network;
-
-        // Translucent membership hull behind each guild's players.
-        network.on("beforeDrawing", (ctx: CanvasRenderingContext2D) => {
-          if (!showGroups.value) return;
-          for (const g of groups) {
-            const pos = network.getPositions(g.ids);
-            const pts = g.ids.map((id) => pos[id]).filter(Boolean) as Pt[];
-            if (pts.length === 0) continue;
-            const h = hull(pts);
-            ctx.save();
-            ctx.beginPath();
-            if (h.length === 1) {
-              ctx.arc(h[0].x, h[0].y, 48, 0, Math.PI * 2);
-            } else {
-              ctx.moveTo(h[0].x, h[0].y);
-              for (let i = 1; i < h.length; i++) ctx.lineTo(h[i].x, h[i].y);
-              ctx.closePath();
-            }
-            ctx.lineJoin = "round";
-            ctx.lineCap = "round";
-            ctx.lineWidth = 95; // pad the hull into a soft rounded blob
-            ctx.strokeStyle = g.color + "22";
-            ctx.fillStyle = g.color + "1f";
-            ctx.stroke();
-            ctx.fill();
-            const top = pts.reduce((a, b) => (b.y < a.y ? b : a));
-            ctx.fillStyle = g.color + "dd";
-            ctx.font = "bold 15px ui-sans-serif, system-ui, sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText(g.label, top.x, top.y - 64);
-            ctx.restore();
-          }
-        });
-
         counts.value = { nodes: nodes.length, edges: edges.length };
         state.value = "ready";
       } catch (e) {
@@ -461,17 +357,6 @@ export default function TupleGraph() {
             </button>
           </div>
         </div>
-
-        <button
-          type="button"
-          class={`rounded-md border border-slate-700 ${seg(showGroups.value)}`}
-          onClick={() => {
-            showGroups.value = !showGroups.value;
-            net.current?.redraw();
-          }}
-        >
-          ◓ Member regions
-        </button>
       </div>
 
       {!isTree && (
@@ -533,19 +418,6 @@ export default function TupleGraph() {
         <span class="inline-flex items-center gap-1 text-slate-500">
           ⬡ userset (<code>obj#relation</code>)
         </span>
-        {showGroups.value &&
-          groupLegend.value.map((g) => (
-            <span key={g.label} class="inline-flex items-center gap-1">
-              <span
-                class="inline-block h-2.5 w-3.5 rounded-sm"
-                style={{
-                  background: g.color + "55",
-                  border: `1px solid ${g.color}`,
-                }}
-              />
-              {g.label}
-            </span>
-          ))}
       </div>
 
       <div class="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
