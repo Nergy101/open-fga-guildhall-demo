@@ -7,9 +7,9 @@ import { useSignal } from "@preact/signals";
  * object/userset, one edge per tuple (labelled by relation).
  *
  * Two layouts, toggleable live:
- *  - Tree  — hierarchical, layered by node type (platform ▸ alliance ▸ guild ▸
- *            objects ▸ tabs ▸ users), top-down (UD) or left-right (LR);
- *  - Force — force-directed, then frozen so dragged nodes stay put.
+ *  - Tree  — hierarchical, layered by node type, top-down (UD) or left-right (LR);
+ *  - Force — force-directed with live sliders (repulsion, edge length, …) and a
+ *            Freeze button so you can lock it and drag nodes that stay put.
  *
  * vis-network touches the DOM/canvas, so it's imported lazily (client-only).
  */
@@ -21,7 +21,6 @@ interface Tuple {
   condition?: { name: string } | null;
 }
 
-// Node colour per entity type (the prefix before ":").
 const TYPE_COLOR: Record<string, string> = {
   platform: "#f59e0b",
   alliance: "#a78bfa",
@@ -35,8 +34,7 @@ const TYPE_COLOR: Record<string, string> = {
 };
 const FALLBACK = "#94a3b8";
 
-// Tree depth per type: the platform owns the alliance ▸ guilds ▸ their objects ▸
-// tabs, with users (players/members) as the leaf row.
+// Tree depth per type: platform ▸ alliance ▸ guild ▸ objects ▸ tabs ▸ users.
 const LEVEL: Record<string, number> = {
   platform: 0,
   alliance: 1,
@@ -55,8 +53,6 @@ const shortLabel = (id: string) =>
 
 type Dir = "UD" | "LR";
 
-// Hierarchical tree, layered by the per-node `level`. Physics off, so the layout
-// is deterministic and any node you drag stays where you drop it.
 const treeOptions = (dir: Dir) => ({
   layout: {
     hierarchical: {
@@ -82,23 +78,6 @@ const treeOptions = (dir: Dir) => ({
   },
 });
 
-// Force-directed spread; frozen after stabilization (see apply()).
-const forceOptions = () => ({
-  layout: { hierarchical: { enabled: false } },
-  physics: {
-    enabled: true,
-    solver: "forceAtlas2Based",
-    forceAtlas2Based: {
-      gravitationalConstant: -55,
-      springLength: 130,
-      springConstant: 0.08,
-      avoidOverlap: 0.4,
-    },
-    stabilization: { iterations: 250 },
-  },
-  edges: { smooth: { enabled: true, type: "dynamic" } },
-});
-
 interface VisNetwork {
   destroy(): void;
   fit(): void;
@@ -112,24 +91,56 @@ export default function TupleGraph() {
   const state = useSignal<"loading" | "ready" | "error">("loading");
   const error = useSignal<string | null>(null);
   const counts = useSignal({ nodes: 0, edges: 0 });
+
   const mode = useSignal<"tree" | "force">("tree");
   const dir = useSignal<Dir>("UD");
+  const frozen = useSignal(false);
 
-  // Re-layout live. setOptions deep-merges, so this only touches layout/physics/smooth.
-  function apply(m: "tree" | "force", d: Dir) {
-    const n = net.current;
-    if (!n) return;
-    if (m === "tree") {
-      n.setOptions(treeOptions(d));
-    } else {
-      n.setOptions(forceOptions());
-      // Freeze once the force layout settles, so dragged nodes stay put.
-      n.once(
-        "stabilizationIterationsDone",
-        () => net.current?.setOptions({ physics: false }),
-      );
-    }
+  // Force-layout knobs (forceAtlas2Based).
+  const repulsion = useSignal(55); // → gravitationalConstant: -repulsion
+  const edgeLength = useSignal(130); // springLength
+  const stiffness = useSignal(0.08); // springConstant
+  const centerPull = useSignal(0.01); // centralGravity
+  const spread = useSignal(0.4); // avoidOverlap
+  const damping = useSignal(0.4);
+
+  const physicsObj = () => ({
+    enabled: true,
+    solver: "forceAtlas2Based",
+    forceAtlas2Based: {
+      gravitationalConstant: -repulsion.value,
+      centralGravity: centerPull.value,
+      springLength: edgeLength.value,
+      springConstant: stiffness.value,
+      avoidOverlap: spread.value,
+      damping: damping.value,
+    },
+  });
+
+  function setTree(d: Dir) {
+    mode.value = "tree";
+    dir.value = d;
+    net.current?.setOptions(treeOptions(d));
     setTimeout(() => net.current?.fit(), 80);
+  }
+  function setForce() {
+    mode.value = "force";
+    frozen.value = false;
+    net.current?.setOptions({
+      layout: { hierarchical: { enabled: false } },
+      physics: physicsObj(),
+      edges: { smooth: { enabled: true, type: "dynamic" } },
+    });
+    setTimeout(() => net.current?.fit(), 700);
+  }
+  function tuneForce() {
+    frozen.value = false;
+    net.current?.setOptions({ physics: physicsObj() });
+  }
+  function toggleFreeze() {
+    const f = !frozen.value;
+    frozen.value = f;
+    net.current?.setOptions(f ? { physics: false } : { physics: physicsObj() });
   }
 
   useEffect(() => {
@@ -141,7 +152,6 @@ export default function TupleGraph() {
         if (json.error) throw new Error(json.error);
         const tuples: Tuple[] = json.tuples ?? [];
 
-        // Unique nodes: one per object / userset that appears in any tuple.
         const ids = new Set<string>();
         for (const t of tuples) {
           ids.add(t.user);
@@ -236,7 +246,6 @@ export default function TupleGraph() {
     };
   }, []);
 
-  const legend = Object.entries(TYPE_COLOR);
   const seg = (active: boolean) =>
     `px-2.5 py-1 transition-colors ${
       active
@@ -244,6 +253,64 @@ export default function TupleGraph() {
         : "bg-slate-800/50 text-slate-300 hover:bg-slate-800"
     }`;
   const isTree = mode.value === "tree";
+
+  const sliders: {
+    label: string;
+    sig: { value: number };
+    min: number;
+    max: number;
+    step: number;
+    fmt: (v: number) => string;
+  }[] = [
+    {
+      label: "Repulsion",
+      sig: repulsion,
+      min: 0,
+      max: 250,
+      step: 5,
+      fmt: (v) => String(v),
+    },
+    {
+      label: "Edge length",
+      sig: edgeLength,
+      min: 40,
+      max: 400,
+      step: 10,
+      fmt: (v) => String(v),
+    },
+    {
+      label: "Edge stiffness",
+      sig: stiffness,
+      min: 0,
+      max: 0.3,
+      step: 0.005,
+      fmt: (v) => v.toFixed(3),
+    },
+    {
+      label: "Center pull",
+      sig: centerPull,
+      min: 0,
+      max: 0.5,
+      step: 0.01,
+      fmt: (v) => v.toFixed(2),
+    },
+    {
+      label: "Spread",
+      sig: spread,
+      min: 0,
+      max: 1,
+      step: 0.05,
+      fmt: (v) => v.toFixed(2),
+    },
+    {
+      label: "Damping",
+      sig: damping,
+      min: 0.05,
+      max: 1,
+      step: 0.05,
+      fmt: (v) => v.toFixed(2),
+    },
+  ];
 
   return (
     <div class="space-y-2">
@@ -254,21 +321,11 @@ export default function TupleGraph() {
             <button
               type="button"
               class={seg(isTree)}
-              onClick={() => {
-                mode.value = "tree";
-                apply("tree", dir.value);
-              }}
+              onClick={() => setTree(dir.value)}
             >
               🌳 Tree
             </button>
-            <button
-              type="button"
-              class={seg(!isTree)}
-              onClick={() => {
-                mode.value = "force";
-                apply("force", dir.value);
-              }}
-            >
+            <button type="button" class={seg(!isTree)} onClick={setForce}>
               🕸️ Force
             </button>
           </div>
@@ -285,10 +342,7 @@ export default function TupleGraph() {
               type="button"
               disabled={!isTree}
               class={`${seg(dir.value === "UD")} disabled:cursor-not-allowed`}
-              onClick={() => {
-                dir.value = "UD";
-                apply("tree", "UD");
-              }}
+              onClick={() => setTree("UD")}
             >
               ↓ Top-down
             </button>
@@ -296,10 +350,7 @@ export default function TupleGraph() {
               type="button"
               disabled={!isTree}
               class={`${seg(dir.value === "LR")} disabled:cursor-not-allowed`}
-              onClick={() => {
-                dir.value = "LR";
-                apply("tree", "LR");
-              }}
+              onClick={() => setTree("LR")}
             >
               → Left-right
             </button>
@@ -307,8 +358,50 @@ export default function TupleGraph() {
         </div>
       </div>
 
+      {!isTree && (
+        <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-300">
+              ⚙️ Force controls
+            </span>
+            <button
+              type="button"
+              onClick={toggleFreeze}
+              class="rounded-md border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-xs text-slate-200 hover:bg-slate-800"
+            >
+              {frozen.value ? "▶ Resume" : "❄️ Freeze"}
+            </button>
+          </div>
+          <div class="grid grid-cols-1 gap-x-5 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+            {sliders.map((s) => (
+              <label
+                key={s.label}
+                class="flex items-center gap-2 text-[11px] text-slate-400"
+              >
+                <span class="w-24 shrink-0">{s.label}</span>
+                <input
+                  type="range"
+                  min={s.min}
+                  max={s.max}
+                  step={s.step}
+                  value={s.sig.value}
+                  onInput={(e) => {
+                    s.sig.value = Number((e.target as HTMLInputElement).value);
+                    tuneForce();
+                  }}
+                  class="h-1 flex-1 accent-amber-400"
+                />
+                <span class="w-10 text-right tabular-nums text-slate-300">
+                  {s.fmt(s.sig.value)}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
-        {legend.map(([type, color]) => (
+        {Object.entries(TYPE_COLOR).map(([type, color]) => (
           <span key={type} class="inline-flex items-center gap-1">
             <span
               class="inline-block h-2.5 w-2.5 rounded-full"
