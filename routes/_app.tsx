@@ -103,6 +103,15 @@ export default define.page(function App({ Component, state, url }) {
               ·{" "}
               <a
                 class="underline hover:text-slate-300"
+                href="http://localhost:4000/playground"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                OpenFGA Playground (:4000) ↗
+              </a>{" "}
+              ·{" "}
+              <a
+                class="underline hover:text-slate-300"
                 href="https://github.com/Nergy101/open-fga-guildhall-demo"
                 target="_blank"
                 rel="noopener noreferrer"
