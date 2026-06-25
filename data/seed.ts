@@ -199,18 +199,15 @@ export const TUPLES: SeedTuple[] = [
   { user: "user:medivh", relation: "attendee", object: "raid:onyxia" },
 
   // ── Channels ─────────────────────────────────────────────────────────────
-  // Public tavern board — readable by everyone (user:*).
+  // The game's public tavern board — owned by the platform (not any guild),
+  // readable AND postable by everyone (user:*).
   {
-    user: "guild:ironforge",
-    relation: "guild",
+    user: "platform:guildhall",
+    relation: "platform",
     object: "channel:tavern_board",
   },
   { user: "user:*", relation: "viewer", object: "channel:tavern_board" },
-  {
-    user: "guild:ironforge#member",
-    relation: "poster",
-    object: "channel:tavern_board",
-  },
+  { user: "user:*", relation: "poster", object: "channel:tavern_board" },
 
   // Members-only general chat.
   { user: "guild:ironforge", relation: "guild", object: "channel:general" },

@@ -353,12 +353,12 @@ export const RESOURCES: Resource[] = [
   },
   {
     key: "tavern",
-    name: "Channel: Tavern Board",
+    name: "GuildHall Tavern Board",
     emoji: "📜",
     object: "channel:tavern_board",
     type: "channel",
     blurb:
-      "Public: readable by everyone via user:* — even guests and the banned.",
+      "Owned by The Game: GuildHall itself (not any guild) — readable AND postable by everyone via user:*, even guests and the banned.",
     actions: [
       {
         key: "read",
@@ -370,7 +370,7 @@ export const RESOURCES: Resource[] = [
         key: "post",
         label: "Post",
         relation: "can_post",
-        concept: "members only",
+        concept: "public access (user:*)",
       },
     ],
   },

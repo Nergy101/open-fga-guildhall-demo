@@ -103,7 +103,7 @@ const MATRIX: [
   ["raid:blackwing_lair", "can_edit", undefined, [T, T, F, F, F, F, F]],
   // Channels: public + groups + nested group
   ["channel:tavern_board", "can_read", undefined, [T, T, T, T, T, T, T]],
-  ["channel:tavern_board", "can_post", undefined, [T, T, T, T, F, F, F]],
+  ["channel:tavern_board", "can_post", undefined, [T, T, T, T, T, T, T]],
   ["channel:general", "can_read", undefined, [T, T, T, T, F, F, F]],
   ["channel:war_council", "can_read", undefined, [T, T, F, F, F, F, F]],
   ["channel:war_council", "can_moderate", undefined, [T, T, F, F, F, F, F]],
@@ -453,6 +453,35 @@ Deno.test("guild council: a majority vote gates guildmaster removal", async () =
           object: "kick_motion:depose_magni",
         },
       ],
+    }),
+    true,
+  );
+});
+
+Deno.test("the Tavern Board is owned by the platform, not a guild", async () => {
+  // Ownership moved to "The Game: GuildHall" (platform), off Ironforge.
+  assertEquals(
+    await check({
+      user: "platform:guildhall",
+      relation: "platform",
+      object: "channel:tavern_board",
+    }),
+    true,
+  );
+  assertEquals(
+    await check({
+      user: "guild:ironforge",
+      relation: "guild",
+      object: "channel:tavern_board",
+    }),
+    false,
+  );
+  // Still public: everyone reads and posts (even a guest).
+  assertEquals(
+    await check({
+      user: "user:guest",
+      relation: "can_post",
+      object: "channel:tavern_board",
     }),
     true,
   );

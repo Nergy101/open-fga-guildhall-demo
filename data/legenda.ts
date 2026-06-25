@@ -14,6 +14,7 @@ function label(object: string): string {
   const r = RESOURCES.find((x) => x.object === object);
   if (r) return `${r.emoji} ${r.name.replace(/^[^:]*:\s*/, "")}`;
   if (object.startsWith("alliance:")) return "🤝 Azeroth Pact";
+  if (object.startsWith("platform:")) return "🎮 The Game: GuildHall";
   return object;
 }
 
@@ -191,7 +192,10 @@ export function channelsChart(): string {
   // Owning guild ▸ channel.
   const owner = new Map<string, string>();
   for (const t of TUPLES) {
-    if (t.relation === "guild" && t.object.startsWith("channel:")) {
+    if (
+      (t.relation === "guild" || t.relation === "platform") &&
+      t.object.startsWith("channel:")
+    ) {
       owner.set(t.object, t.user);
     }
   }

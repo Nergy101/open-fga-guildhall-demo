@@ -3,6 +3,11 @@ model
 
 type user
 
+# ── Platform ─────────────────────────────────────────────────────────────────
+# The game itself ("The Game: GuildHall") — a top-level owner above the guilds.
+# Game-wide objects like the public tavern board belong to it, not to any guild.
+type platform
+
 # ── Alliance ─────────────────────────────────────────────────────────────────
 # NESTED GROUPS (userset of usersets): an alliance member is a member of *any*
 # guild that belongs to the alliance. `member from guild` walks alliance -> guild
@@ -103,8 +108,9 @@ type raid
 type channel
   relations
     define guild: [guild]
+    define platform: [platform]
     define viewer: [user, user:*, guild#member, guild#raider, guild#officer, alliance#member]
-    define poster: [user, guild#member, guild#officer, alliance#member, alliance#officer]
+    define poster: [user, user:*, guild#member, guild#officer, alliance#member, alliance#officer]
     define moderator: [guild#officer]
     define can_read: viewer
     define can_post: poster
