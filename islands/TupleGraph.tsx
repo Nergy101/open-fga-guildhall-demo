@@ -4,7 +4,13 @@ import { useSignal } from "@preact/signals";
 /**
  * Live tuple-store node-graph. Reads every tuple from OpenFGA (via /api/tuples →
  * the Read API) and renders it as an interactive vis-network graph: one node per
- * object/userset, one edge per tuple (labelled by relation). Drag, zoom, pan.
+ * object/userset, one edge per tuple (labelled by relation).
+ *
+ * Two layouts, toggleable live:
+ *  - Tree  — hierarchical, layered by node type (platform ▸ alliance ▸ guild ▸
+ *            objects ▸ tabs ▸ users), top-down (UD) or left-right (LR);
+ *  - Force — force-directed, then frozen so dragged nodes stay put.
+ *
  * vis-network touches the DOM/canvas, so it's imported lazily (client-only).
  */
 
@@ -47,6 +53,52 @@ const typeOf = (id: string) => id.split(":")[0];
 const shortLabel = (id: string) =>
   id === "user:*" ? "everyone (*)" : id.slice(id.indexOf(":") + 1);
 
+type Dir = "UD" | "LR";
+
+// Hierarchical tree, layered by the per-node `level`. Physics off, so the layout
+// is deterministic and any node you drag stays where you drop it.
+const treeOptions = (dir: Dir) => ({
+  layout: {
+    hierarchical: {
+      enabled: true,
+      direction: dir,
+      sortMethod: "directed",
+      levelSeparation: 150,
+      nodeSpacing: 110,
+      treeSpacing: 180,
+      parentCentralization: true,
+      blockShifting: true,
+      edgeMinimization: true,
+    },
+  },
+  physics: false,
+  edges: {
+    smooth: {
+      enabled: true,
+      type: "cubicBezier",
+      forceDirection: dir === "UD" ? "vertical" : "horizontal",
+      roundness: 0.5,
+    },
+  },
+});
+
+// Force-directed spread; frozen after stabilization (see apply()).
+const forceOptions = () => ({
+  layout: { hierarchical: { enabled: false } },
+  physics: {
+    enabled: true,
+    solver: "forceAtlas2Based",
+    forceAtlas2Based: {
+      gravitationalConstant: -55,
+      springLength: 130,
+      springConstant: 0.08,
+      avoidOverlap: 0.4,
+    },
+    stabilization: { iterations: 250 },
+  },
+  edges: { smooth: { enabled: true, type: "dynamic" } },
+});
+
 interface VisNetwork {
   destroy(): void;
   fit(): void;
@@ -56,13 +108,32 @@ interface VisNetwork {
 
 export default function TupleGraph() {
   const ref = useRef<HTMLDivElement>(null);
+  const net = useRef<VisNetwork | null>(null);
   const state = useSignal<"loading" | "ready" | "error">("loading");
   const error = useSignal<string | null>(null);
   const counts = useSignal({ nodes: 0, edges: 0 });
+  const mode = useSignal<"tree" | "force">("tree");
+  const dir = useSignal<Dir>("UD");
+
+  // Re-layout live. setOptions deep-merges, so this only touches layout/physics/smooth.
+  function apply(m: "tree" | "force", d: Dir) {
+    const n = net.current;
+    if (!n) return;
+    if (m === "tree") {
+      n.setOptions(treeOptions(d));
+    } else {
+      n.setOptions(forceOptions());
+      // Freeze once the force layout settles, so dragged nodes stay put.
+      n.once(
+        "stabilizationIterationsDone",
+        () => net.current?.setOptions({ physics: false }),
+      );
+    }
+    setTimeout(() => net.current?.fit(), 80);
+  }
 
   useEffect(() => {
     let cancelled = false;
-    let network: VisNetwork | null = null;
     (async () => {
       try {
         const res = await fetch("/api/tuples");
@@ -76,7 +147,6 @@ export default function TupleGraph() {
           ids.add(t.user);
           ids.add(t.object);
         }
-
         const nodes = [...ids].map((id) => {
           const type = typeOf(id);
           const userset = id.includes("#");
@@ -96,7 +166,6 @@ export default function TupleGraph() {
             },
           };
         });
-
         const edges = tuples.map((t, i) => {
           const cond = t.condition?.name;
           return {
@@ -123,7 +192,8 @@ export default function TupleGraph() {
         };
         if (cancelled || !ref.current) return;
 
-        network = new mod.Network(ref.current, { nodes, edges }, {
+        const init = treeOptions("UD");
+        net.current = new mod.Network(ref.current, { nodes, edges }, {
           nodes: {
             shape: "dot",
             size: 16,
@@ -143,30 +213,12 @@ export default function TupleGraph() {
               strokeWidth: 3,
               align: "middle",
             },
-            smooth: {
-              enabled: true,
-              type: "cubicBezier",
-              forceDirection: "vertical",
-              roundness: 0.5,
-            },
             width: 1.5,
+            smooth: init.edges.smooth,
           },
-          layout: {
-            hierarchical: {
-              enabled: true,
-              direction: "UD",
-              sortMethod: "directed",
-              levelSeparation: 150,
-              nodeSpacing: 110,
-              treeSpacing: 180,
-              parentCentralization: true,
-              blockShifting: true,
-              edgeMinimization: true,
-            },
-          },
-          // Deterministic tree layout — physics off so dragged nodes stay put.
-          physics: false,
           interaction: { hover: true, tooltipDelay: 120, multiselect: true },
+          layout: init.layout,
+          physics: init.physics,
         });
         counts.value = { nodes: nodes.length, edges: edges.length };
         state.value = "ready";
@@ -179,14 +231,82 @@ export default function TupleGraph() {
     })();
     return () => {
       cancelled = true;
-      network?.destroy();
+      net.current?.destroy();
+      net.current = null;
     };
   }, []);
 
   const legend = Object.entries(TYPE_COLOR);
+  const seg = (active: boolean) =>
+    `px-2.5 py-1 transition-colors ${
+      active
+        ? "bg-amber-400/20 text-amber-100"
+        : "bg-slate-800/50 text-slate-300 hover:bg-slate-800"
+    }`;
+  const isTree = mode.value === "tree";
 
   return (
     <div class="space-y-2">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+        <div class="inline-flex items-center gap-1.5">
+          <span class="text-slate-500">Layout</span>
+          <div class="inline-flex overflow-hidden rounded-md border border-slate-700">
+            <button
+              type="button"
+              class={seg(isTree)}
+              onClick={() => {
+                mode.value = "tree";
+                apply("tree", dir.value);
+              }}
+            >
+              🌳 Tree
+            </button>
+            <button
+              type="button"
+              class={seg(!isTree)}
+              onClick={() => {
+                mode.value = "force";
+                apply("force", dir.value);
+              }}
+            >
+              🕸️ Force
+            </button>
+          </div>
+        </div>
+
+        <div
+          class={`inline-flex items-center gap-1.5 ${
+            isTree ? "" : "opacity-40"
+          }`}
+        >
+          <span class="text-slate-500">Direction</span>
+          <div class="inline-flex overflow-hidden rounded-md border border-slate-700">
+            <button
+              type="button"
+              disabled={!isTree}
+              class={`${seg(dir.value === "UD")} disabled:cursor-not-allowed`}
+              onClick={() => {
+                dir.value = "UD";
+                apply("tree", "UD");
+              }}
+            >
+              ↓ Top-down
+            </button>
+            <button
+              type="button"
+              disabled={!isTree}
+              class={`${seg(dir.value === "LR")} disabled:cursor-not-allowed`}
+              onClick={() => {
+                dir.value = "LR";
+                apply("tree", "LR");
+              }}
+            >
+              → Left-right
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
         {legend.map(([type, color]) => (
           <span key={type} class="inline-flex items-center gap-1">
