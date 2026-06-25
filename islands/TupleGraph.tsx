@@ -164,7 +164,8 @@ export default function TupleGraph() {
             id,
             label: shortLabel(id),
             title: id,
-            level: LEVEL[type] ?? 3,
+            // Usersets (obj#relation) sit one tier above their base type.
+            level: Math.max(0, (LEVEL[type] ?? 3) - (userset ? 1 : 0)),
             shape: userset ? "hexagon" : "dot",
             color: {
               background: TYPE_COLOR[type] ?? FALLBACK,
