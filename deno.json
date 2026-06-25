@@ -35,7 +35,8 @@
     "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.12",
     "@openfga/syntax-transformer": "npm:@openfga/syntax-transformer@^0.2.1",
     "@openfga/sdk": "npm:@openfga/sdk@^0.9.6",
-    "mermaid": "npm:mermaid@^11.4.1"
+    "mermaid": "npm:mermaid@^11.4.1",
+    "vis-network": "npm:vis-network@^9.1.9"
   },
   "compilerOptions": {
     "lib": [

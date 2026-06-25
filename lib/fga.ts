@@ -246,3 +246,29 @@ export async function expand(
   }, cfg);
   return json.tree?.root;
 }
+
+/** A stored relationship tuple (with its optional ABAC condition). */
+export interface StoredTuple {
+  user: string;
+  relation: string;
+  object: string;
+  condition?: { name: string; context?: Record<string, unknown> } | null;
+}
+
+/** Reads every tuple in the store, following pagination (Read API). */
+export async function readTuples(): Promise<StoredTuple[]> {
+  const cfg = await loadFgaConfig();
+  const out: StoredTuple[] = [];
+  let token = "";
+  do {
+    const res = await api<
+      { tuples?: { key: StoredTuple }[]; continuation_token?: string }
+    >("/read", {
+      page_size: 100,
+      continuation_token: token || undefined,
+    }, cfg);
+    for (const t of res.tuples ?? []) out.push(t.key);
+    token = res.continuation_token ?? "";
+  } while (token);
+  return out;
+}

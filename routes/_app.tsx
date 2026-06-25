@@ -8,6 +8,7 @@ const NAV = [
   { href: "/labs", label: "Interactive Labs", icon: "🧪" },
   { href: "/playground", label: "Playground", icon: "🎛️" },
   { href: "/explorer", label: "Access Matrix", icon: "🔢" },
+  { href: "/graph", label: "Tuple Graph", icon: "🕸️" },
   { href: "/model", label: "Model", icon: "📜" },
   { href: "/try", label: "Try it out", icon: "🎮" },
 ];
