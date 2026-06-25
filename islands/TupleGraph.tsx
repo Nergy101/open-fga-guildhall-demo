@@ -29,6 +29,20 @@ const TYPE_COLOR: Record<string, string> = {
 };
 const FALLBACK = "#94a3b8";
 
+// Tree depth per type: the platform owns the alliance ▸ guilds ▸ their objects ▸
+// tabs, with users (players/members) as the leaf row.
+const LEVEL: Record<string, number> = {
+  platform: 0,
+  alliance: 1,
+  guild: 2,
+  vault: 3,
+  raid: 3,
+  channel: 3,
+  kick_motion: 3,
+  vault_tab: 4,
+  user: 5,
+};
+
 const typeOf = (id: string) => id.split(":")[0];
 const shortLabel = (id: string) =>
   id === "user:*" ? "everyone (*)" : id.slice(id.indexOf(":") + 1);
@@ -36,6 +50,8 @@ const shortLabel = (id: string) =>
 interface VisNetwork {
   destroy(): void;
   fit(): void;
+  once(event: string, cb: () => void): void;
+  setOptions(opts: unknown): void;
 }
 
 export default function TupleGraph() {
@@ -54,22 +70,21 @@ export default function TupleGraph() {
         if (json.error) throw new Error(json.error);
         const tuples: Tuple[] = json.tuples ?? [];
 
-        // Degree drives node size, so hubs (guilds, the alliance) read big.
-        const degree = new Map<string, number>();
-        const bump = (id: string) => degree.set(id, (degree.get(id) ?? 0) + 1);
+        // Unique nodes: one per object / userset that appears in any tuple.
+        const ids = new Set<string>();
         for (const t of tuples) {
-          bump(t.user);
-          bump(t.object);
+          ids.add(t.user);
+          ids.add(t.object);
         }
 
-        const nodes = [...degree.keys()].map((id) => {
+        const nodes = [...ids].map((id) => {
           const type = typeOf(id);
           const userset = id.includes("#");
           return {
             id,
             label: shortLabel(id),
             title: id,
-            value: degree.get(id) ?? 1,
+            level: LEVEL[type] ?? 3,
             shape: userset ? "hexagon" : "dot",
             color: {
               background: TYPE_COLOR[type] ?? FALLBACK,
@@ -111,13 +126,13 @@ export default function TupleGraph() {
         network = new mod.Network(ref.current, { nodes, edges }, {
           nodes: {
             shape: "dot",
+            size: 16,
             borderWidth: 2,
             font: {
               color: "#e2e8f0",
               size: 15,
               face: "ui-sans-serif, system-ui",
             },
-            scaling: { min: 10, max: 38, label: { min: 13, max: 22 } },
           },
           edges: {
             arrows: { to: { enabled: true, scaleFactor: 0.55 } },
@@ -128,19 +143,29 @@ export default function TupleGraph() {
               strokeWidth: 3,
               align: "middle",
             },
-            smooth: { enabled: true, type: "dynamic" },
+            smooth: {
+              enabled: true,
+              type: "cubicBezier",
+              forceDirection: "vertical",
+              roundness: 0.5,
+            },
             width: 1.5,
           },
-          physics: {
-            solver: "forceAtlas2Based",
-            forceAtlas2Based: {
-              gravitationalConstant: -55,
-              springLength: 130,
-              springConstant: 0.08,
-              avoidOverlap: 0.4,
+          layout: {
+            hierarchical: {
+              enabled: true,
+              direction: "UD",
+              sortMethod: "directed",
+              levelSeparation: 150,
+              nodeSpacing: 110,
+              treeSpacing: 180,
+              parentCentralization: true,
+              blockShifting: true,
+              edgeMinimization: true,
             },
-            stabilization: { iterations: 250 },
           },
+          // Deterministic tree layout — physics off so dragged nodes stay put.
+          physics: false,
           interaction: { hover: true, tooltipDelay: 120, multiselect: true },
         });
         counts.value = { nodes: nodes.length, edges: edges.length };
