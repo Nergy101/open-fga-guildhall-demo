@@ -99,7 +99,7 @@ export const CHANNEL_SCOPES: ChannelScope[] = [
     key: "shared",
     title: "🤝 Shared — Azeroth Pact",
     subtitle: "Members of any guild in the alliance",
-    objects: ["channel:pact_hall"],
+    objects: ["channel:pact_hall", "channel:pact_general"],
   },
   {
     key: "allied",
@@ -430,12 +430,42 @@ export const RESOURCES: Resource[] = [
     emoji: "🤝",
     object: "channel:pact_hall",
     type: "channel",
-    blurb: "Alliance-wide: members of ANY guild in the pact (nested group).",
+    blurb:
+      "Alliance-wide hall: any pact member reads; only officers+ (of any pact guild) post.",
     actions: [
       {
         key: "read",
         label: "Read",
         relation: "can_read",
+        concept: "nested group: alliance#member",
+      },
+      {
+        key: "post",
+        label: "Post",
+        relation: "can_post",
+        concept: "nested group: alliance#officer",
+      },
+    ],
+  },
+  {
+    key: "pact_general",
+    name: "Channel: Pact General",
+    emoji: "🤝",
+    object: "channel:pact_general",
+    type: "channel",
+    blurb:
+      "Second shared channel: any member of any pact guild may read AND post.",
+    actions: [
+      {
+        key: "read",
+        label: "Read",
+        relation: "can_read",
+        concept: "nested group: alliance#member",
+      },
+      {
+        key: "post",
+        label: "Post",
+        relation: "can_post",
         concept: "nested group: alliance#member",
       },
     ],

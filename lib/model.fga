@@ -14,6 +14,9 @@ type alliance
     # Raiders of *any* guild in the alliance — lets allied raiders roll loot on
     # shared raids (nested tuple-to-userset: alliance -> guild -> guild#raider).
     define raider: raider from guild
+    # Officers of *any* guild in the alliance — lets allied officers post in the
+    # pact's officer-only channel (nested TTU: alliance -> guild -> guild#officer).
+    define officer: officer from guild
 
 # ── Guild ────────────────────────────────────────────────────────────────────
 # RANK LADDER via CONCENTRIC relations (each rank inherits the one above it),
@@ -101,7 +104,7 @@ type channel
   relations
     define guild: [guild]
     define viewer: [user, user:*, guild#member, guild#raider, guild#officer, alliance#member]
-    define poster: [user, guild#member, guild#officer]
+    define poster: [user, guild#member, guild#officer, alliance#member, alliance#officer]
     define moderator: [guild#officer]
     define can_read: viewer
     define can_post: poster

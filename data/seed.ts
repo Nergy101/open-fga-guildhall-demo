@@ -243,12 +243,33 @@ export const TUPLES: SeedTuple[] = [
     object: "channel:war_council",
   },
 
-  // Alliance-wide hall — readable by members of ANY guild in the pact (nested group).
+  // Alliance-wide hall — all pact members read; only officers+ (of any pact guild) post.
   { user: "guild:ironforge", relation: "guild", object: "channel:pact_hall" },
   {
     user: "alliance:azeroth_pact#member",
     relation: "viewer",
     object: "channel:pact_hall",
+  },
+  {
+    user: "alliance:azeroth_pact#officer",
+    relation: "poster",
+    object: "channel:pact_hall",
+  },
+  // Second shared channel: Pact General — any pact member may read AND post.
+  {
+    user: "guild:ironforge",
+    relation: "guild",
+    object: "channel:pact_general",
+  },
+  {
+    user: "alliance:azeroth_pact#member",
+    relation: "viewer",
+    object: "channel:pact_general",
+  },
+  {
+    user: "alliance:azeroth_pact#member",
+    relation: "poster",
+    object: "channel:pact_general",
   },
   // Orgrimmar's own members-only board — Medivh can read his own guild's channel.
   {

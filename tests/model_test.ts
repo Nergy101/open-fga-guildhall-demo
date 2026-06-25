@@ -108,6 +108,10 @@ const MATRIX: [
   ["channel:war_council", "can_read", undefined, [T, T, F, F, F, F, F]],
   ["channel:war_council", "can_moderate", undefined, [T, T, F, F, F, F, F]],
   ["channel:pact_hall", "can_read", undefined, [T, T, T, T, F, T, F]],
+  ["channel:pact_hall", "can_post", undefined, [T, T, F, F, F, T, F]],
+  // Second shared channel: Pact General — any pact member reads AND posts
+  ["channel:pact_general", "can_read", undefined, [T, T, T, T, F, T, F]],
+  ["channel:pact_general", "can_post", undefined, [T, T, T, T, F, T, F]],
   // Second vault: the War Chest — officers + guildmaster only may withdraw
   ["vault:war_chest", "can_view", undefined, [T, T, T, T, F, F, F]],
   ["vault:war_chest", "can_deposit", undefined, [T, T, F, F, F, F, F]],
@@ -356,17 +360,24 @@ Deno.test("ListObjects returns the right channels per persona", async () => {
       "channel:general",
       "channel:war_council",
       "channel:pact_hall",
+      "channel:pact_general",
     ]),
   );
   assertEquals(
     await asSet("user:arthas"),
-    new Set(["channel:tavern_board", "channel:general", "channel:pact_hall"]),
+    new Set([
+      "channel:tavern_board",
+      "channel:general",
+      "channel:pact_hall",
+      "channel:pact_general",
+    ]),
   );
   assertEquals(
     await asSet("user:medivh"),
     new Set([
       "channel:tavern_board",
       "channel:pact_hall",
+      "channel:pact_general",
       "channel:orgrimmar_hall",
     ]),
   );

@@ -26,7 +26,11 @@ function persona(user: string): { emoji: string; name: string } {
 
 function audience(userset: string): string {
   if (userset === "user:*") return "🌍 everyone (public)";
-  if (userset.startsWith("alliance:")) return "🤝 any alliance member";
+  if (userset.startsWith("alliance:")) {
+    return userset.includes("#officer")
+      ? "🛡️ any alliance officer+"
+      : "🤝 any alliance member";
+  }
   const m = userset.match(/^guild:([^#]+)#(\w+)/);
   if (!m) return userset;
   const guild = m[1][0].toUpperCase() + m[1].slice(1);
