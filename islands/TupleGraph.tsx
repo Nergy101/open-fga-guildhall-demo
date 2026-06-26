@@ -85,12 +85,28 @@ interface VisNetwork {
   setOptions(opts: unknown): void;
 }
 
+interface VisDataSet {
+  update(data: Record<string, unknown> | Record<string, unknown>[]): unknown;
+}
+
 export default function TupleGraph() {
   const ref = useRef<HTMLDivElement>(null);
   const net = useRef<VisNetwork | null>(null);
   const state = useSignal<"loading" | "ready" | "error">("loading");
   const error = useSignal<string | null>(null);
   const counts = useSignal({ nodes: 0, edges: 0 });
+  const total = useSignal({ nodes: 0, edges: 0 });
+
+  // Manual exploration: hide whole kinds, or individual nodes within a kind.
+  const nodeSet = useRef<VisDataSet | null>(null);
+  const edgeSet = useRef<VisDataSet | null>(null);
+  const nodeMeta = useRef<{ id: string; kind: string }[]>([]);
+  const edgeMeta = useRef<{ id: number; from: string; to: string }[]>([]);
+  const disabledKinds = useSignal<Set<string>>(new Set());
+  const hiddenIds = useSignal<Set<string>>(new Set());
+  const nodesByKind = useSignal<
+    { kind: string; color: string; nodes: { id: string; label: string }[] }[]
+  >([]);
 
   const mode = useSignal<"tree" | "force">("tree");
   const dir = useSignal<Dir>("UD");
@@ -141,6 +157,48 @@ export default function TupleGraph() {
     const f = !frozen.value;
     frozen.value = f;
     net.current?.setOptions(f ? { physics: false } : { physics: physicsObj() });
+  }
+
+  function applyFilter() {
+    const ns = nodeSet.current;
+    const es = edgeSet.current;
+    if (!ns || !es) return;
+    const dis = disabledKinds.value;
+    const hid = hiddenIds.value;
+    const visible = new Set<string>();
+    const nUpd = nodeMeta.current.map((n) => {
+      const vis = !dis.has(n.kind) && !hid.has(n.id);
+      if (vis) visible.add(n.id);
+      return { id: n.id, hidden: !vis, physics: vis };
+    });
+    let ev = 0;
+    const eUpd = edgeMeta.current.map((e) => {
+      const vis = visible.has(e.from) && visible.has(e.to);
+      if (vis) ev++;
+      return { id: e.id, hidden: !vis };
+    });
+    ns.update(nUpd);
+    es.update(eUpd);
+    counts.value = { nodes: visible.size, edges: ev };
+  }
+  function toggleKind(kind: string) {
+    const s = new Set(disabledKinds.value);
+    if (s.has(kind)) s.delete(kind);
+    else s.add(kind);
+    disabledKinds.value = s;
+    applyFilter();
+  }
+  function toggleNode(id: string) {
+    const s = new Set(hiddenIds.value);
+    if (s.has(id)) s.delete(id);
+    else s.add(id);
+    hiddenIds.value = s;
+    applyFilter();
+  }
+  function showAll() {
+    disabledKinds.value = new Set();
+    hiddenIds.value = new Set();
+    applyFilter();
   }
 
   useEffect(() => {
@@ -200,11 +258,53 @@ export default function TupleGraph() {
             data: unknown,
             opts: unknown,
           ) => VisNetwork;
+          DataSet: new (items: unknown[]) => VisDataSet;
         };
         if (cancelled || !ref.current) return;
 
+        // Metadata + an ordered, grouped kind list for the filter panel.
+        nodeMeta.current = nodes.map((n) => ({ id: n.id, kind: typeOf(n.id) }));
+        edgeMeta.current = edges.map((e) => ({
+          id: e.id,
+          from: e.from,
+          to: e.to,
+        }));
+        const order = Object.keys(TYPE_COLOR);
+        const byKind = new Map<string, { id: string; label: string }[]>();
+        for (const n of nodes) {
+          const k = typeOf(n.id);
+          let arr = byKind.get(k);
+          if (!arr) {
+            arr = [];
+            byKind.set(k, arr);
+          }
+          arr.push({ id: n.id, label: n.label });
+        }
+        nodesByKind.value = [...byKind.keys()]
+          .sort((a, b) => {
+            const ia = order.indexOf(a);
+            const ib = order.indexOf(b);
+            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) ||
+              a.localeCompare(b);
+          })
+          .map((kind) => ({
+            kind,
+            color: TYPE_COLOR[kind] ?? FALLBACK,
+            nodes: byKind.get(kind)!.sort((a, b) =>
+              a.label.localeCompare(b.label)
+            ),
+          }));
+
+        const nodeData = new mod.DataSet(nodes);
+        const edgeData = new mod.DataSet(edges);
+        nodeSet.current = nodeData;
+        edgeSet.current = edgeData;
+
         const init = treeOptions("UD");
-        net.current = new mod.Network(ref.current, { nodes, edges }, {
+        net.current = new mod.Network(ref.current, {
+          nodes: nodeData,
+          edges: edgeData,
+        }, {
           nodes: {
             shape: "dot",
             size: 16,
@@ -231,6 +331,7 @@ export default function TupleGraph() {
           layout: init.layout,
           physics: init.physics,
         });
+        total.value = { nodes: nodes.length, edges: edges.length };
         counts.value = { nodes: nodes.length, edges: edges.length };
         state.value = "ready";
       } catch (e) {
@@ -420,6 +521,89 @@ export default function TupleGraph() {
         </span>
       </div>
 
+      {state.value === "ready" && nodesByKind.value.length > 0 && (
+        <details
+          open
+          class="rounded-lg border border-slate-800 bg-slate-900/40"
+        >
+          <summary class="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300">
+            <span>🔎 Node filters</span>
+            <span class="font-normal text-slate-500">
+              {counts.value.nodes}/{total.value.nodes} nodes ·{" "}
+              {counts.value.edges}/{total.value.edges} tuples
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showAll();
+              }}
+              class="ml-auto rounded border border-slate-700 bg-slate-800/60 px-2 py-0.5 text-[11px] font-normal text-slate-300 hover:bg-slate-800"
+            >
+              Show all
+            </button>
+          </summary>
+          <div class="grid grid-cols-1 gap-2 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3">
+            {nodesByKind.value.map(({ kind, color, nodes }) => {
+              const kindOn = !disabledKinds.value.has(kind);
+              const vis = nodes.filter((n) =>
+                !hiddenIds.value.has(n.id)
+              ).length;
+              return (
+                <details
+                  key={kind}
+                  class="rounded-md border border-slate-800 bg-slate-900/60"
+                >
+                  <summary class="flex cursor-pointer select-none items-center gap-2 px-2 py-1.5 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={kindOn}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleKind(kind)}
+                      class="accent-amber-400"
+                    />
+                    <span
+                      class="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: color }}
+                    />
+                    <span
+                      class={kindOn
+                        ? "text-slate-200"
+                        : "text-slate-500 line-through"}
+                    >
+                      {kind}
+                    </span>
+                    <span class="ml-auto tabular-nums text-slate-500">
+                      {kindOn ? vis : 0}/{nodes.length}
+                    </span>
+                  </summary>
+                  <div class="max-h-44 space-y-0.5 overflow-auto border-t border-slate-800 px-2 py-1.5">
+                    {nodes.map((n) => (
+                      <label
+                        key={n.id}
+                        class={`flex items-center gap-1.5 text-[11px] ${
+                          kindOn ? "text-slate-300" : "text-slate-600"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          disabled={!kindOn}
+                          checked={kindOn && !hiddenIds.value.has(n.id)}
+                          onChange={() => toggleNode(n.id)}
+                          class="accent-amber-400"
+                        />
+                        <span class="truncate" title={n.id}>{n.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        </details>
+      )}
+
       <div class="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
         {state.value === "loading" && (
           <div class="absolute inset-0 z-10 flex items-center justify-center text-sm text-slate-400">
@@ -435,7 +619,8 @@ export default function TupleGraph() {
         )}
         {state.value === "ready" && (
           <div class="absolute right-2 top-2 z-10 rounded-md bg-slate-900/80 px-2 py-1 text-[11px] text-slate-400">
-            {counts.value.nodes} nodes · {counts.value.edges} tuples
+            {counts.value.nodes}/{total.value.nodes} nodes ·{" "}
+            {counts.value.edges}/{total.value.edges} tuples
           </div>
         )}
         <div ref={ref} class="h-[72vh] w-full" />
