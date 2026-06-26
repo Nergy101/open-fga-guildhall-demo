@@ -59,3 +59,38 @@ services:
       - "8088:8088" # HTTP API   -> http://localhost:8088
       - "8089:8089" # gRPC API
       - "4000:4000" # Playground -> http://localhost:4000/playground
+
+  # Auto-seeds the "guildhall" store (model + tuples) once OpenFGA is up, so the
+  # stack is always populated after `docker compose up` — no manual `deno task
+  # seed`. Reuses the same Deno seeder; runs once and exits.
+  seed:
+    image: denoland/deno:latest
+    container_name: guildhall-seed
+    working_dir: /app
+    user: root
+    # Hermetic deno cache (own DENO_DIR volume); ignore the host node_modules.
+    entrypoint: [
+      "deno",
+      "run",
+      "-A",
+      "--node-modules-dir=none",
+      "scripts/seed.ts",
+    ]
+    environment:
+      - DENO_DIR=/deno-dir
+      # Requests go over the compose network…
+      - FGA_API_URL=http://openfga:8088
+      # …but fga.local.json must point the host app/browser at the published port.
+      - FGA_PUBLIC_URL=http://localhost:8088
+    depends_on:
+      openfga:
+        condition: service_started
+    restart: "no"
+    volumes:
+      - .:/app
+      - guildhall-deno-cache:/deno-dir
+    networks:
+      - openfga
+
+volumes:
+  guildhall-deno-cache:

@@ -57,16 +57,15 @@ every major OpenFGA feature:
 ## Run it
 
 ```sh
-# 1. Start OpenFGA (HTTP :8088, gRPC :8089, Playground :4000) + Postgres
+# 1. Start OpenFGA (HTTP :8088, gRPC :8089, Playground :4000) + Postgres, and
+#    auto-seed the `guildhall` store. A one-shot `seed` service compiles the
+#    model and writes every tuple as soon as OpenFGA is up — no manual step.
 docker compose up -d
 
 # 2. Install deps (first time only)
 deno install
 
-# 3. Compile the model, create the store, write the tuples
-deno task seed
-
-# 4. Start the app (prints a localhost URL, e.g. http://localhost:5173)
+# 3. Start the app (prints a localhost URL, e.g. http://localhost:5173)
 deno task dev
 ```
 
@@ -74,10 +73,13 @@ deno task dev
 > HTTP API is mapped to **:8088**. Override with `FGA_API_URL` if you change it.
 
 > The bundled **OpenFGA Playground** is enabled at
-> **<http://localhost:4000/playground>** — open it to browse and traverse the
-> live `guildhall` store (model + tuples) visually. It needs internet (it embeds
-> play.fga.dev), only runs on `localhost`, and per OpenFGA's docs shows up to
-> 100 tuples and skips conditional/contextual ones.
+> **<http://localhost:4000/playground>**, but it's a _from-scratch authoring
+> sandbox_: it embeds play.fga.dev, prompts you to **create a new store**, only
+> runs on `localhost`, and (per OpenFGA's docs) shows up to 100 tuples while
+> skipping conditional/contextual ones — so it does **not** load the live
+> `guildhall` store. To explore guildhall itself, use the app's **Access
+> Matrix**, **Tuple Graph**, and **Playground** pages — they run live `Check` /
+> `ListObjects` calls against the seeded store.
 
 ### Verify
 
@@ -154,5 +156,9 @@ has **no OpenFGA SDK dependency** — it talks to the server with plain `fetch`.
 
 ## Reset
 
-Re-running `deno task seed` deletes and recreates the `guildhall` store
-(idempotent). To wipe everything: `docker compose down -v`.
+`docker compose up` auto-seeds a fresh `guildhall` store via the one-shot `seed`
+service (idempotent); `deno task seed` does the same against an already-running
+stack. Each re-seed mints a new store id, so restart `deno task dev` afterwards
+to pick it up. To wipe everything (including Postgres data):
+`docker compose
+down -v`.

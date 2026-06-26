@@ -14,6 +14,10 @@ import { TUPLES } from "@/data/seed.ts";
 import { writeFgaConfig } from "@/lib/store.ts";
 
 const API_URL = Deno.env.get("FGA_API_URL") ?? "http://localhost:8088";
+// What the host app + tests connect to. When seeding from inside the compose
+// network (FGA_API_URL=http://openfga:8088), this stays the host-mapped URL so
+// fga.local.json still points the browser/dev-server at http://localhost:8088.
+const PUBLIC_URL = Deno.env.get("FGA_PUBLIC_URL") ?? API_URL;
 const STORE_NAME = "guildhall";
 
 function delay(ms: number): Promise<void> {
@@ -110,7 +114,7 @@ async function main(): Promise<void> {
   console.log(`🔗 Wrote ${TUPLES.length} tuples`);
 
   // 5. Persist config for the app + tests.
-  await writeFgaConfig({ apiUrl: API_URL, storeId, modelId });
+  await writeFgaConfig({ apiUrl: PUBLIC_URL, storeId, modelId });
   console.log("✅ Wrote fga.local.json — ready. Run `deno task dev`.");
 }
 
