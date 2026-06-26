@@ -68,7 +68,8 @@ services:
     container_name: guildhall-seed
     working_dir: /app
     user: root
-    # Hermetic deno cache (own DENO_DIR volume); ignore the host node_modules.
+    # Hermetic deno cache (own DENO_DIR volume) and --node-modules-dir=none so
+    # the run ignores the host node_modules; deps resolve via the repo lockfile.
     entrypoint: [
       "deno",
       "run",
