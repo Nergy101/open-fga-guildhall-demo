@@ -20,6 +20,7 @@ const PERSONAS = [
   "guldan",
   "medivh",
   "guest",
+  "gamon",
 ];
 
 // [object, relation, context | undefined, expected per persona (in PERSONAS order)]
@@ -30,24 +31,24 @@ const MATRIX: [
   boolean[],
 ][] = [
   // Guild: rank ladder + blocklist
-  ["guild:ironforge", "can_read", undefined, [T, T, T, T, F, F, F]],
-  ["guild:ironforge", "can_invite", undefined, [T, T, F, F, F, F, F]],
-  ["guild:ironforge", "can_kick", undefined, [T, T, F, F, F, F, F]],
-  ["guild:ironforge", "can_edit_motd", undefined, [T, T, F, F, F, F, F]],
-  ["guild:ironforge", "can_manage_ranks", undefined, [T, F, F, F, F, F, F]],
-  ["guild:ironforge", "can_disband", undefined, [T, F, F, F, F, F, F]],
-  // Allied guild Orgrimmar: only Medivh (its guildmaster) has access here — and
-  // as GM he can manage ranks and disband his own guild.
-  ["guild:orgrimmar", "can_read", undefined, [F, F, F, F, F, T, F]],
-  ["guild:orgrimmar", "can_invite", undefined, [F, F, F, F, F, T, F]],
-  ["guild:orgrimmar", "can_manage_ranks", undefined, [F, F, F, F, F, T, F]],
-  ["guild:orgrimmar", "can_disband", undefined, [F, F, F, F, F, T, F]],
+  ["guild:ironforge", "can_read", undefined, [T, T, T, T, F, F, F, F]],
+  ["guild:ironforge", "can_invite", undefined, [T, T, F, F, F, F, F, F]],
+  ["guild:ironforge", "can_kick", undefined, [T, T, F, F, F, F, F, F]],
+  ["guild:ironforge", "can_edit_motd", undefined, [T, T, F, F, F, F, F, F]],
+  ["guild:ironforge", "can_manage_ranks", undefined, [T, F, F, F, F, F, F, F]],
+  ["guild:ironforge", "can_disband", undefined, [T, F, F, F, F, F, F, F]],
+  // Allied guild Orgrimmar: Medivh (GM) commands it; Gamon (recruit) only reads.
+  ["guild:orgrimmar", "can_read", undefined, [F, F, F, F, F, T, F, T]],
+  ["guild:orgrimmar", "can_invite", undefined, [F, F, F, F, F, T, F, F]],
+  ["guild:orgrimmar", "can_manage_ranks", undefined, [F, F, F, F, F, T, F, F]],
+  ["guild:orgrimmar", "can_disband", undefined, [F, F, F, F, F, T, F, F]],
   // Vault: parent-child + ABAC (default 250g)
-  ["vault:ironforge_bank", "can_view", undefined, [T, T, T, T, F, F, F]],
+  ["vault:ironforge_bank", "can_view", undefined, [T, T, T, T, F, F, F, F]],
   ["vault:ironforge_bank", "can_deposit", { requested_amount: 250 }, [
     T,
     T,
     T,
+    F,
     F,
     F,
     F,
@@ -61,9 +62,10 @@ const MATRIX: [
     F,
     F,
     F,
+    F,
   ]],
   // Vault tab: 3-level hierarchy
-  ["vault_tab:legendary", "can_view", undefined, [T, T, T, T, F, F, F]],
+  ["vault_tab:legendary", "can_view", undefined, [T, T, T, T, F, F, F, F]],
   ["vault_tab:legendary", "can_withdraw", { requested_amount: 250 }, [
     T,
     T,
@@ -72,9 +74,10 @@ const MATRIX: [
     F,
     F,
     F,
+    F,
   ]],
   // Raid: signup (group+condition), loot (intersection)
-  ["raid:molten_core", "can_view", undefined, [T, T, T, T, F, F, F]],
+  ["raid:molten_core", "can_view", undefined, [T, T, T, T, F, F, F, F]],
   ["raid:molten_core", "can_signup", { current_time: DURING }, [
     T,
     T,
@@ -83,12 +86,13 @@ const MATRIX: [
     F,
     F,
     F,
+    F,
   ]],
-  ["raid:molten_core", "can_loot", undefined, [T, F, T, F, F, F, F]],
-  ["raid:molten_core", "can_view_tactics", undefined, [T, T, T, F, F, F, F]],
-  ["raid:molten_core", "can_edit", undefined, [T, T, F, F, F, F, F]],
+  ["raid:molten_core", "can_loot", undefined, [T, F, T, F, F, F, F, F]],
+  ["raid:molten_core", "can_view_tactics", undefined, [T, T, T, F, F, F, F, F]],
+  ["raid:molten_core", "can_edit", undefined, [T, T, F, F, F, F, F, F]],
   // Raid 2: Blackwing Lair — Jaina attended this one (Thrall did not)
-  ["raid:blackwing_lair", "can_view", undefined, [T, T, T, T, F, F, F]],
+  ["raid:blackwing_lair", "can_view", undefined, [T, T, T, T, F, F, F, F]],
   ["raid:blackwing_lair", "can_signup", { current_time: DURING }, [
     T,
     T,
@@ -97,25 +101,40 @@ const MATRIX: [
     F,
     F,
     F,
+    F,
   ]],
-  ["raid:blackwing_lair", "can_loot", undefined, [F, T, T, F, F, F, F]],
-  ["raid:blackwing_lair", "can_view_tactics", undefined, [T, T, T, F, F, F, F]],
-  ["raid:blackwing_lair", "can_edit", undefined, [T, T, F, F, F, F, F]],
+  ["raid:blackwing_lair", "can_loot", undefined, [F, T, T, F, F, F, F, F]],
+  ["raid:blackwing_lair", "can_view_tactics", undefined, [
+    T,
+    T,
+    T,
+    F,
+    F,
+    F,
+    F,
+    F,
+  ]],
+  ["raid:blackwing_lair", "can_edit", undefined, [T, T, F, F, F, F, F, F]],
   // Channels: public + groups + nested group
-  ["channel:tavern_board", "can_read", undefined, [T, T, T, T, T, T, T]],
-  ["channel:tavern_board", "can_post", undefined, [T, T, T, T, T, T, T]],
-  ["channel:general", "can_read", undefined, [T, T, T, T, F, F, F]],
-  ["channel:war_council", "can_read", undefined, [T, T, F, F, F, F, F]],
-  ["channel:war_council", "can_moderate", undefined, [T, T, F, F, F, F, F]],
-  ["channel:pact_hall", "can_read", undefined, [T, T, T, T, F, T, F]],
-  ["channel:pact_hall", "can_post", undefined, [T, T, F, F, F, T, F]],
+  ["channel:tavern_board", "can_read", undefined, [T, T, T, T, T, T, T, T]],
+  ["channel:tavern_board", "can_post", undefined, [T, T, T, T, T, T, T, T]],
+  ["channel:general", "can_read", undefined, [T, T, T, T, F, F, F, F]],
+  // General: moderated by officers+ of Ironforge (guild#officer).
+  ["channel:general", "can_moderate", undefined, [T, T, F, F, F, F, F, F]],
+  ["channel:war_council", "can_read", undefined, [T, T, F, F, F, F, F, F]],
+  ["channel:war_council", "can_moderate", undefined, [T, T, F, F, F, F, F, F]],
+  ["channel:pact_hall", "can_read", undefined, [T, T, T, T, F, T, F, T]],
+  ["channel:pact_hall", "can_post", undefined, [T, T, F, F, F, T, F, F]],
+  // Shared halls: moderated only by pact guildmasters (Thrall + Medivh).
+  ["channel:pact_hall", "can_moderate", undefined, [T, F, F, F, F, T, F, F]],
   // Second shared channel: Pact General — any pact member reads AND posts
-  ["channel:pact_general", "can_read", undefined, [T, T, T, T, F, T, F]],
-  ["channel:pact_general", "can_post", undefined, [T, T, T, T, F, T, F]],
+  ["channel:pact_general", "can_read", undefined, [T, T, T, T, F, T, F, T]],
+  ["channel:pact_general", "can_post", undefined, [T, T, T, T, F, T, F, T]],
+  ["channel:pact_general", "can_moderate", undefined, [T, F, F, F, F, T, F, F]],
   // Second vault: the War Chest — officers + guildmaster only may withdraw
-  ["vault:war_chest", "can_view", undefined, [T, T, T, T, F, F, F]],
-  ["vault:war_chest", "can_deposit", undefined, [T, T, F, F, F, F, F]],
-  ["vault:war_chest", "can_withdraw", undefined, [T, T, F, F, F, F, F]],
+  ["vault:war_chest", "can_view", undefined, [T, T, T, T, F, F, F, F]],
+  ["vault:war_chest", "can_deposit", undefined, [T, T, F, F, F, F, F, F]],
+  ["vault:war_chest", "can_withdraw", undefined, [T, T, F, F, F, F, F, F]],
   // Extra tabs inherit their parent vault's rules
   ["vault_tab:materials", "can_withdraw", { requested_amount: 250 }, [
     T,
@@ -125,13 +144,14 @@ const MATRIX: [
     F,
     F,
     F,
+    F,
   ]],
-  ["vault_tab:treasury", "can_view", undefined, [T, T, T, T, F, F, F]],
-  ["vault_tab:treasury", "can_withdraw", undefined, [T, T, F, F, F, F, F]],
-  // Alliance-shared raid: Gul'dan attended but is banned (denied); Medivh is an
-  // allied-guild member (allowed). can_view_tactics is attendance-gated, so
-  // even banned Gul'dan keeps it.
-  ["raid:onyxia", "can_view", undefined, [T, T, T, T, F, T, F]],
+  ["vault_tab:treasury", "can_view", undefined, [T, T, T, T, F, F, F, F]],
+  ["vault_tab:treasury", "can_withdraw", undefined, [T, T, F, F, F, F, F, F]],
+  // Alliance-shared raid: Gul'dan attended but is banned (denied); Medivh and
+  // Gamon join via the allied guild. Tactics is attendance-gated (so even banned
+  // Gul'dan keeps it); loot still needs raider rank, which recruit Gamon lacks.
+  ["raid:onyxia", "can_view", undefined, [T, T, T, T, F, T, F, T]],
   ["raid:onyxia", "can_signup", { current_time: DURING }, [
     T,
     T,
@@ -140,15 +160,54 @@ const MATRIX: [
     F,
     T,
     F,
+    T,
   ]],
-  ["raid:onyxia", "can_loot", undefined, [T, T, T, F, F, T, F]],
-  ["raid:onyxia", "can_view_tactics", undefined, [T, T, T, T, F, T, F]],
-  // Orgrimmar's own board: only its members (Medivh) can read or post
-  ["channel:orgrimmar_hall", "can_read", undefined, [F, F, F, F, F, T, F]],
-  ["channel:orgrimmar_hall", "can_post", undefined, [F, F, F, F, F, T, F]],
+  ["raid:onyxia", "can_loot", undefined, [T, T, T, F, F, T, F, F]],
+  ["raid:onyxia", "can_view_tactics", undefined, [T, T, T, T, F, T, F, T]],
+  // Orgrimmar's own board: its members (Medivh + Gamon) read & post; only its
+  // guildmaster (Medivh) moderates.
+  ["channel:orgrimmar_hall", "can_read", undefined, [F, F, F, F, F, T, F, T]],
+  ["channel:orgrimmar_hall", "can_post", undefined, [F, F, F, F, F, T, F, T]],
+  ["channel:orgrimmar_hall", "can_moderate", undefined, [
+    F,
+    F,
+    F,
+    F,
+    F,
+    T,
+    F,
+    F,
+  ]],
   // Guild Council: the motion to depose Magni hasn't passed (1 of 3 votes), so
   // the can_remove gate is closed for everyone until a majority votes.
-  ["kick_motion:depose_magni", "can_remove", undefined, [F, F, F, F, F, F, F]],
+  ["kick_motion:depose_magni", "can_remove", undefined, [
+    F,
+    F,
+    F,
+    F,
+    F,
+    F,
+    F,
+    F,
+  ]],
+  // Items: ownership, soulbinding (no trade), public vs private inspect
+  ["item:ashkandi", "can_use", undefined, [T, F, F, F, F, F, F, F]],
+  ["item:ashkandi", "can_trade", undefined, [F, F, F, F, F, F, F, F]], // soulbound
+  ["item:ashkandi", "can_inspect", undefined, [T, T, T, T, T, T, T, T]], // public
+  // Shared heirloom: every member owns it; banned Gul'dan is dropped.
+  ["item:guild_tabard", "can_use", undefined, [T, T, T, T, F, F, F, F]],
+  ["item:guild_tabard", "can_trade", undefined, [F, F, F, F, F, F, F, F]], // soulbound
+  // Consumable: members may use AND trade it; only owners may inspect.
+  ["item:health_potion", "can_use", undefined, [T, T, T, T, F, F, F, F]],
+  ["item:health_potion", "can_trade", undefined, [T, T, T, T, F, F, F, F]],
+  ["item:health_potion", "can_inspect", undefined, [T, T, T, T, F, F, F, F]],
+  // Rexxar's private weapon — not even inspectable by others.
+  ["item:rusty_hatchet", "can_inspect", undefined, [F, F, F, T, F, F, F, F]],
+  // Banned Gul'dan still owns his personal relic (ownership != membership).
+  ["item:cursed_skull", "can_use", undefined, [F, F, F, F, T, F, F, F]],
+  // Allied guild's banner — Medivh's, public to inspect.
+  ["item:warsong_banner", "can_use", undefined, [F, F, F, F, F, T, F, F]],
+  ["item:warsong_banner", "can_inspect", undefined, [T, T, T, T, T, T, T, T]],
 ];
 
 Deno.test("access matrix matches the design for every persona", async (t) => {
@@ -381,6 +440,15 @@ Deno.test("ListObjects returns the right channels per persona", async () => {
       "channel:orgrimmar_hall",
     ]),
   );
+  assertEquals(
+    await asSet("user:gamon"),
+    new Set([
+      "channel:tavern_board",
+      "channel:pact_hall",
+      "channel:pact_general",
+      "channel:orgrimmar_hall",
+    ]),
+  );
   assertEquals(await asSet("user:guest"), new Set(["channel:tavern_board"]));
 });
 
@@ -453,6 +521,49 @@ Deno.test("guild council: a majority vote gates guildmaster removal", async () =
           object: "kick_motion:depose_magni",
         },
       ],
+    }),
+    true,
+  );
+  // ...but only *another* guildmaster may wield the passed motion.
+  const passedCtx = [
+    {
+      user: "user:muradin",
+      relation: "vote",
+      object: "kick_motion:depose_magni",
+    },
+    {
+      user: "user:*",
+      relation: "passed",
+      object: "kick_motion:depose_magni",
+    },
+  ];
+  // Magni is a guildmaster but the target — he can't depose himself.
+  assertEquals(
+    await check({
+      user: "user:magni",
+      relation: "can_remove",
+      object: "kick_motion:depose_magni",
+      contextualTuples: passedCtx,
+    }),
+    false,
+  );
+  // Jaina is an officer, not a guildmaster — denied even once it passes.
+  assertEquals(
+    await check({
+      user: "user:jaina",
+      relation: "can_remove",
+      object: "kick_motion:depose_magni",
+      contextualTuples: passedCtx,
+    }),
+    false,
+  );
+  // Muradin is another guildmaster (not the target) — allowed.
+  assertEquals(
+    await check({
+      user: "user:muradin",
+      relation: "can_remove",
+      object: "kick_motion:depose_magni",
+      contextualTuples: passedCtx,
     }),
     true,
   );

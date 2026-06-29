@@ -22,6 +22,9 @@ type alliance
     # Officers of *any* guild in the alliance — lets allied officers post in the
     # pact's officer-only channel (nested TTU: alliance -> guild -> guild#officer).
     define officer: officer from guild
+    # Guildmasters of *any* guild in the alliance — moderate the shared pact
+    # channels (nested TTU: alliance -> guild -> guild#guildmaster).
+    define guildmaster: guildmaster from guild
 
 # ── Guild ────────────────────────────────────────────────────────────────────
 # RANK LADDER via CONCENTRIC relations (each rank inherits the one above it),
@@ -111,24 +114,43 @@ type channel
     define platform: [platform]
     define viewer: [user, user:*, guild#member, guild#raider, guild#officer, alliance#member]
     define poster: [user, user:*, guild#member, guild#officer, alliance#member, alliance#officer]
-    define moderator: [guild#officer]
+    # Officers+ of a guild (general/war council), a guild's guildmaster (its own
+    # board), or any pact guildmaster (the shared alliance halls).
+    define moderator: [guild#officer, guild#guildmaster, alliance#guildmaster]
     define can_read: viewer
     define can_post: poster
     define can_moderate: moderator
+
+# ── Item (player inventory) ────────────────────────────────────────────────────
+# OWNERSHIP, SOULBINDING & PUBLIC INSPECT. `owner` is the holder — a specific
+# player, or every member of a guild (a shared heirloom, so the blocklist drops
+# banned members automatically). `bound` (user:*) marks a soulbound item that
+# cannot be traded; `inspector` (user:*) makes it publicly inspectable (armory).
+# Quantities and stats are deliberately NOT modeled — that's game-database state.
+type item
+  relations
+    define guild: [guild]
+    define owner: [user, guild#member]
+    define bound: [user:*]
+    define inspector: [user, user:*]
+    define can_inspect: inspector or owner
+    define can_use: owner
+    define can_trade: owner but not bound
 
 # ── Guild Council (majority vote) ──────────────────────────────────────────────
 # OpenFGA can't COUNT, so it can't natively express "a majority of guildmasters".
 # A motion to depose a guildmaster collects one `vote` tuple per guildmaster; the
 # app tallies those votes against the guild's guildmasters and grants `passed`
-# once a majority agrees. OpenFGA then enforces the gate: a guildmaster may only
-# be removed when the motion has `passed` (`can_remove`).
+# once a majority agrees. OpenFGA then enforces the gate: only another
+# guildmaster of the guild — never the target — may remove, and only once the
+# motion has `passed`.
 type kick_motion
   relations
     define guild: [guild]
     define target: [user]
     define vote: [user]
     define passed: [user:*]
-    define can_remove: passed
+    define can_remove: (passed and guildmaster from guild) but not target
 
 # ── Conditions (ABAC) ────────────────────────────────────────────────────────
 condition within_signup_window(current_time: timestamp, opens_at: timestamp, closes_at: timestamp) {

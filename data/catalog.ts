@@ -109,6 +109,101 @@ export const CHANNEL_SCOPES: ChannelScope[] = [
   },
 ];
 
+/**
+ * Player inventory items. Modeled in OpenFGA as OWNERSHIP relations only —
+ * who may use / trade / inspect an item (a `type item` with `owner`, `bound`,
+ * `inspector`). Item quantities and stats are NOT in OpenFGA — that's game
+ * state. Drives the forum's Inventory tab.
+ */
+export interface InventoryItem {
+  object: string;
+  name: string;
+  emoji: string;
+  /** Legendary | Epic | Rare | Uncommon | Common — drives the accent color. */
+  rarity: string;
+  /** Human label of who holds the item (display only). */
+  owner: string;
+  blurb: string;
+  /** Game-state flavor OpenFGA deliberately does NOT model (e.g. stack count). */
+  detail?: string;
+}
+
+export const ITEMS: InventoryItem[] = [
+  {
+    object: "item:ashkandi",
+    name: "Ashkandi, Greatsword of the Brotherhood",
+    emoji: "🗡️",
+    rarity: "Legendary",
+    owner: "Thrall",
+    blurb:
+      "Thrall's soulbound greatsword. Anyone may inspect it; only Thrall may wield it, and it can never be traded.",
+  },
+  {
+    object: "item:frostmourne",
+    name: "Frostmourne",
+    emoji: "❄️",
+    rarity: "Legendary",
+    owner: "Arthas",
+    blurb:
+      "A cursed runeblade bound to Arthas — his to wield, no one's to trade.",
+  },
+  {
+    object: "item:staff_antonidas",
+    name: "Staff of Antonidas",
+    emoji: "🔮",
+    rarity: "Epic",
+    owner: "Jaina",
+    blurb:
+      "Jaina's soulbound staff. Inspectable by all, wieldable only by her.",
+  },
+  {
+    object: "item:guild_tabard",
+    name: "Ironforge Guild Tabard",
+    emoji: "🎽",
+    rarity: "Uncommon",
+    owner: "Every Ironforge member",
+    blurb:
+      "A shared heirloom owned by the guild#member userset — every member wears one, and banned members lose it automatically.",
+  },
+  {
+    object: "item:health_potion",
+    name: "Greater Healing Potion",
+    emoji: "🧪",
+    rarity: "Common",
+    owner: "Every Ironforge member",
+    detail: "×12 in your bags",
+    blurb:
+      "A common consumable any member carries and may trade. OpenFGA gates who may use or trade it — the stack count (×12) is game-database state, not a tuple.",
+  },
+  {
+    object: "item:rusty_hatchet",
+    name: "Rusty Hatchet",
+    emoji: "🪓",
+    rarity: "Common",
+    owner: "Rexxar",
+    blurb:
+      "Rexxar's starter weapon — privately held (no one else can even inspect it) and freely tradeable.",
+  },
+  {
+    object: "item:cursed_skull",
+    name: "Cursed Skull of Gul'dan",
+    emoji: "☠️",
+    rarity: "Epic",
+    owner: "Gul'dan",
+    blurb:
+      "Gul'dan is banned from the guild — yet he still owns his personal, soulbound relic. Ownership is independent of guild membership.",
+  },
+  {
+    object: "item:warsong_banner",
+    name: "Warsong Banner",
+    emoji: "🚩",
+    rarity: "Epic",
+    owner: "Medivh · Orgrimmar",
+    blurb:
+      "Belongs to the allied guild Orgrimmar. Public to inspect, soulbound to Medivh.",
+  },
+];
+
 export const RESOURCES: Resource[] = [
   {
     key: "guild",
@@ -260,7 +355,7 @@ export const RESOURCES: Resource[] = [
       },
       {
         key: "withdraw",
-        label: "Withdraw 250g from tab",
+        label: "Withdraw from tab",
         relation: "can_withdraw",
         concept: "ABAC inherited from vault",
         abac: "withdraw",
@@ -394,6 +489,12 @@ export const RESOURCES: Resource[] = [
         relation: "can_post",
         concept: "group: guild#member",
       },
+      {
+        key: "moderate",
+        label: "Moderate",
+        relation: "can_moderate",
+        concept: "group: guild#officer",
+      },
     ],
   },
   {
@@ -445,6 +546,12 @@ export const RESOURCES: Resource[] = [
         relation: "can_post",
         concept: "nested group: alliance#officer",
       },
+      {
+        key: "moderate",
+        label: "Moderate",
+        relation: "can_moderate",
+        concept: "nested group: alliance#guildmaster",
+      },
     ],
   },
   {
@@ -468,6 +575,12 @@ export const RESOURCES: Resource[] = [
         relation: "can_post",
         concept: "nested group: alliance#member",
       },
+      {
+        key: "moderate",
+        label: "Moderate",
+        relation: "can_moderate",
+        concept: "nested group: alliance#guildmaster",
+      },
     ],
   },
   {
@@ -490,6 +603,12 @@ export const RESOURCES: Resource[] = [
         label: "Post",
         relation: "can_post",
         concept: "group: orgrimmar#member",
+      },
+      {
+        key: "moderate",
+        label: "Moderate",
+        relation: "can_moderate",
+        concept: "group: orgrimmar#guildmaster",
       },
     ],
   },
@@ -547,7 +666,7 @@ export const RESOURCES: Resource[] = [
       },
       {
         key: "withdraw",
-        label: "Withdraw 250g from tab",
+        label: "Withdraw from tab",
         relation: "can_withdraw",
         concept: "ABAC inherited from vault",
         abac: "withdraw",

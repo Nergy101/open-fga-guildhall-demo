@@ -17,6 +17,13 @@ export default define.page(function Legenda() {
     fill?: boolean;
   }[] = [
     {
+      id: "ranks",
+      title: "🪜 The rank ladder",
+      desc:
+        "Concentric ranks: each rank is also the one below it, all the way down to member — unless you're banned.",
+      chart: RANK_LADDER_CHART,
+    },
+    {
       id: "guilds",
       title: "🏰 Guilds, alliance & members",
       desc:
@@ -46,13 +53,6 @@ export default define.page(function Legenda() {
         "Each channel belongs to a guild; the arrows show the rank needed to read or post (concentric — a higher rank inherits it). From the public tavern up to the officers-only war council, plus Orgrimmar's own board.",
       chart: channelsChart(),
       fill: true,
-    },
-    {
-      id: "ranks",
-      title: "🪜 The rank ladder",
-      desc:
-        "Concentric ranks: each rank is also the one below it, all the way down to member — unless you're banned.",
-      chart: RANK_LADDER_CHART,
     },
   ];
 

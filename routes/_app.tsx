@@ -1,10 +1,12 @@
 import { define } from "@/utils.ts";
 import PersonaSwitcher from "@/islands/PersonaSwitcher.tsx";
 import ExplainModal from "@/islands/ExplainModal.tsx";
+import AbacDefaults from "@/islands/AbacDefaults.tsx";
+import { parseAbacParams } from "@/lib/abac.ts";
 
 const NAV = [
   { href: "/legenda", label: "Legenda", icon: "🗺️" },
-  { href: "/", label: "Dashboard", icon: "📊" },
+  { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/labs", label: "Interactive Labs", icon: "🧪" },
   { href: "/playground", label: "Playground", icon: "🎛️" },
   { href: "/explorer", label: "Access Matrix", icon: "🔢" },
@@ -16,7 +18,8 @@ const NAV = [
 export default define.page(function App({ Component, state, url }) {
   const persona = state.persona;
   const bare = url.pathname.startsWith("/forum");
-  const isDashboard = url.pathname === "/";
+  const isDashboard = url.pathname === "/dashboard";
+  const abac = parseAbacParams(url.searchParams);
   // On the forum (the "Try it out" app) the tab title carries the active persona.
   const title = bare && state.forum
     ? `GuildHall · ${state.forum.persona.name}`
@@ -56,7 +59,8 @@ export default define.page(function App({ Component, state, url }) {
                   </div>
                   <nav class="flex flex-wrap gap-1 text-sm">
                     {NAV.map((n) => {
-                      const active = url.pathname === n.href;
+                      const active = url.pathname === n.href ||
+                        url.pathname.startsWith(`${n.href}/`);
                       const highlight = n.href === "/try";
                       return (
                         <a
@@ -89,6 +93,7 @@ export default define.page(function App({ Component, state, url }) {
                       </span>
                     </div>
                     <PersonaSwitcher current={persona.id} />
+                    <AbacDefaults amount={abac.amount} when={abac.when} />
                   </div>
                 )}
               </div>

@@ -53,6 +53,13 @@ export function ForumShell(
       emoji: "💬",
       show: nav.channels,
     },
+    {
+      key: "inventory",
+      href: "/forum/inventory",
+      label: "Inventory",
+      emoji: "🎒",
+      show: nav.inventory,
+    },
   ];
   const visible = items.filter((i) => i.show);
 

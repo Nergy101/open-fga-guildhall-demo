@@ -17,6 +17,7 @@ export interface ForumNav {
   bank: boolean;
   raids: boolean;
   channels: boolean;
+  inventory: boolean;
   officer: boolean;
 }
 

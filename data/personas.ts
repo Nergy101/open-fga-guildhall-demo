@@ -60,6 +60,14 @@ export const PERSONAS: Persona[] = [
       "Guildmaster of the allied guild Orgrimmar — full authority in his own guild. In Ironforge he reaches only the Pact hall and alliance-shared raids; nothing else.",
   },
   {
+    id: "gamon",
+    name: "Gamon",
+    role: "Recruit · Orgrimmar",
+    emoji: "🐂",
+    blurb:
+      "A lowly Orgrimmar recruit (and the city's favorite punching bag). Through the Pact he reaches the shared halls and his own guild's board, but leads nothing and moderates no one.",
+  },
+  {
     id: "guest",
     name: "Wandering Adventurer",
     role: "Guest",

@@ -15,22 +15,22 @@ OpenFGA server**.
 The authorization model (`lib/model.fga`) is deliberately broad — it exercises
 every major OpenFGA feature:
 
-| Feature                               | Where                                                                                 |
-| ------------------------------------- | ------------------------------------------------------------------------------------- |
-| Concentric roles (rank ladder)        | `guild`: guildmaster ▸ officer ▸ raider ▸ recruit                                     |
-| Blocklist (`but not`)                 | `guild.member: recruit but not banned`                                                |
-| Parent → child → grandchild hierarchy | `vault_tab` ▸ `vault` ▸ `guild`                                                       |
-| Usersets / groups                     | `guild#officer`, `guild#member` on channels                                           |
-| Nested groups (userset of usersets)   | `alliance.member: member from guild`                                                  |
-| Public access                         | `channel:tavern_board` viewer `user:*`                                                |
-| Intersection (`and`)                  | `raid.can_loot: attendee and raider from guild`                                       |
-| Union across sources (`or`)           | `raid.can_view: member from guild or member from alliance`                            |
-| Exclusion overrides attendance        | `raid.can_view_tactics: (attendee or leader) but not banned`                          |
-| Cross-org sharing (alliance raids)    | allied guilds' members view, sign up, and roll loot on shared raids                   |
-| ABAC condition (numeric)              | `withdrawal_within_limit` on the vault                                                |
-| ABAC condition (temporal)             | `within_signup_window` on the raid                                                    |
-| ABAC time-based cooldown              | `cooldown_elapsed` — one withdrawal per window (app supplies `last_withdrawal`)       |
-| Majority vote (app-tallied)           | `kick_motion`: deposing a guildmaster needs a council majority (`can_remove: passed`) |
+| Feature                               | Where                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Concentric roles (rank ladder)        | `guild`: guildmaster ▸ officer ▸ raider ▸ recruit                                                                                       |
+| Blocklist (`but not`)                 | `guild.member: recruit but not banned`                                                                                                  |
+| Parent → child → grandchild hierarchy | `vault_tab` ▸ `vault` ▸ `guild`                                                                                                         |
+| Usersets / groups                     | `guild#officer`, `guild#member` on channels                                                                                             |
+| Nested groups (userset of usersets)   | `alliance.member: member from guild`                                                                                                    |
+| Public access                         | `channel:tavern_board` viewer `user:*`                                                                                                  |
+| Intersection (`and`)                  | `raid.can_loot: attendee and raider from guild`                                                                                         |
+| Union across sources (`or`)           | `raid.can_view: member from guild or member from alliance`                                                                              |
+| Exclusion overrides attendance        | `raid.can_view_tactics: (attendee or leader) but not banned`                                                                            |
+| Cross-org sharing (alliance raids)    | allied guilds' members view, sign up, and roll loot on shared raids                                                                     |
+| ABAC condition (numeric)              | `withdrawal_within_limit` on the vault                                                                                                  |
+| ABAC condition (temporal)             | `within_signup_window` on the raid                                                                                                      |
+| ABAC time-based cooldown              | `cooldown_elapsed` — one withdrawal per window (app supplies `last_withdrawal`)                                                         |
+| Majority vote (app-tallied)           | `kick_motion`: deposing a guildmaster needs a council majority; only another guildmaster (not the target) may execute it (`can_remove`) |
 
 ### Personas
 
@@ -97,38 +97,32 @@ deno task test     # asserts the entire access matrix against the live server
   difference: Thrall runs the guild; Gul'dan (banned) sees only the public
   Tavern board; Medivh (allied) reaches the shared raid and can roll loot; a
   Guest barely gets in the door.
-- **Dashboard** (`/`) — resource cards grouped into **collapsible sections**
-  (The Guild, Guild Bank, Guild Raids, Channels), each with a short description
-  and a live access badge per action. Vaults render as panels with their tabs
-  nested inside, so the vault ▸ tab hierarchy is visible at a glance.
+- **Dashboard** (`/dashboard`) — resource cards grouped into **collapsible
+  sections** (The Guild, Guild Bank, Guild Raids, Channels), each with a short
+  description and a live access badge per action. Vaults render as panels with
+  their tabs nested inside, so the vault ▸ tab hierarchy is visible at a glance.
 - **Click any badge** for a popup explaining _why_: the relation's DSL rule, the
   ABAC condition (with the context used), the relevant tuples, and the Expand
   "rules graph" — powered by `/api/explain`.
-- **Access Matrix** (`/explorer`) — every persona × action in one grid, plus
-  four interactive **labs** that re-run live checks as you tweak inputs:
-  - **ABAC Lab** — drag the withdrawal slider / flip the signup window and watch
-    each persona's result change as conditions are evaluated at check time.
-  - **🪜 Rank Ladder Lab** — promote a newcomer up the rank ladder (via a
-    contextual tuple, no store mutation) and watch permissions unlock in tiers —
-    concentric relations made visible.
-  - **☠️ Ban Toggle Lab** — pick a member and blocklist them: every
-    member-derived perk goes dark at once (`member: recruit but not banned`),
-    while the public board stays readable. Gul'dan is banned in the store, so
-    switching to him flips the badges for real.
-  - **🧭 Reachability Lab** — the reverse query: `ListObjects` shows which
-    objects each persona can reach for a relation, side by side.
-  - **🗳️ Guild Council Lab** — a **majority vote**, which OpenFGA can't express
-    (it can't count): cast a guildmaster's vote and watch the app tally it and
-    grant `passed`, opening the `can_remove` gate to depose another guildmaster.
+- **Access Matrix** (`/explorer`) — every persona × action in one grid; each
+  cell is a live `Check`, and ABAC cells (amber ring) use a default context.
+- **🧪 Interactive Labs** (`/labs`) — a list of bite-sized **scenarios**, each a
+  small story about the guilds and their heroes backed by one interactive lab.
+  Open one for a focused, presenter-friendly page (with prev/next to walk a
+  demo): the recruit's climb up the rank ladder, a member's fall to the
+  blocklist, the vault withdrawal limit, the raid signup window, the withdrawal
+  cooldown, a reachability (`ListObjects`) comparison, and the council's
+  majority vote to depose a guildmaster.
 - **Playground** (`/playground`) — run arbitrary queries: **Check**,
   **ListObjects**, **ListUsers** ("who can…?"), **Expand** (the rules graph),
   and **What-if** (a Check against hypothetical contextual tuples — simulate a
   promotion or ban without writing to the store).
 - **Model** (`/model`) — the DSL, all seeded tuples, the persona legend, and the
   store/model ids.
-- **🗺️ Legenda** (`/legenda`) — Mermaid diagrams generated from the seeded
-  tuples: guilds & members, the bank hierarchy, raids & attendance (shared
-  across the alliance), the channel → rank audiences, and the rank ladder.
+- **🗺️ Legenda** (`/legenda`, the app's default landing) — Mermaid diagrams
+  generated from the seeded tuples: guilds & members, the bank hierarchy, raids
+  & attendance (shared across the alliance), the channel → rank audiences, and
+  the rank ladder.
 
 ## How it fits together
 

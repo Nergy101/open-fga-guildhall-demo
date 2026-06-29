@@ -58,6 +58,23 @@ function shortId(object: string): string {
   return i === -1 ? object : object.slice(i + 1);
 }
 
+// A stable color per object name, so identical tags (e.g. every "general")
+// read the same across personas — making the per-persona differences easy to
+// scan. Names are assigned palette slots in sorted order.
+const TAG_COLORS = [
+  "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
+  "bg-sky-500/15 text-sky-300 ring-sky-500/30",
+  "bg-amber-500/15 text-amber-300 ring-amber-500/30",
+  "bg-fuchsia-500/15 text-fuchsia-300 ring-fuchsia-500/30",
+  "bg-violet-500/15 text-violet-300 ring-violet-500/30",
+  "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+];
+
+function tagColor(name: string, order: string[]): string {
+  const i = order.indexOf(name);
+  return TAG_COLORS[(i < 0 ? 0 : i) % TAG_COLORS.length];
+}
+
 export default function ReachabilityLab() {
   const query = useSignal<Query>(QUERIES[0]);
   const objects = useSignal<ByPersona>({});
@@ -85,6 +102,12 @@ export default function ReachabilityLab() {
   useEffect(() => {
     refresh(query.value);
   }, []);
+
+  const allNames = [
+    ...new Set(
+      PERSONAS.flatMap((p) => (objects.value[p.id] ?? []).map(shortId)),
+    ),
+  ].sort();
 
   return (
     <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
@@ -140,7 +163,9 @@ export default function ReachabilityLab() {
                   : ids.map((o) => (
                     <span
                       key={o}
-                      class="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[11px] text-emerald-300"
+                      class={`rounded px-1.5 py-0.5 font-mono text-[11px] ring-1 ring-inset ${
+                        tagColor(shortId(o), allNames)
+                      }`}
                     >
                       {shortId(o)}
                     </span>

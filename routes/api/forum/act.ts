@@ -4,14 +4,17 @@ import { forumPersona, personaUser } from "@/lib/forumSession.ts";
 import {
   addMessage,
   addSignup,
+  addVote,
   adjustBalance,
   deleteMessage,
   getBalance,
   getLastWithdrawal,
+  getVotes,
   recordWithdrawal,
   setMotd,
 } from "@/lib/forumState.ts";
 import { WITHDRAW_COOLDOWN_SECONDS } from "@/data/seed.ts";
+import { GUILDMASTERS, MAJORITY } from "@/lib/council.ts";
 
 const GUILD = "guild:ironforge";
 
@@ -232,17 +235,24 @@ export const handler = define.handlers({
           object: GUILD,
         });
         if (targetIsGm) {
+          const motion = `kick_motion:depose_${target}`;
+          const passed = getVotes(motion).length >= MAJORITY;
           const removable = await check({
             user,
             relation: "can_remove",
-            object: `kick_motion:depose_${target}`,
+            object: motion,
+            contextualTuples: passed
+              ? [{ user: "user:*", relation: "passed", object: motion }]
+              : [],
           });
           if (!removable) {
             return Response.json({
               ok: false,
               message: `🗳️ ${
                 b.body || "A guildmaster"
-              } can't be deposed unilaterally — a majority of the council must vote them out first.`,
+              } can't be deposed yet — the council needs ${MAJORITY} of ${GUILDMASTERS.length} guildmasters (currently ${
+                getVotes(motion).length
+              }). Cast your vote first.`,
             }, { status: 403 });
           }
           // The motion passed; executing it still requires guildmaster rank.
@@ -260,6 +270,59 @@ export const handler = define.handlers({
         run = () => ({
           message: `${b.body || "Member"} kicked. (demo — not persisted)`,
         });
+        break;
+      }
+      case "ban": {
+        const target = b.target;
+        if (!target) {
+          return Response.json({ ok: false, message: "Bad request." }, {
+            status: 400,
+          });
+        }
+        // A guildmaster can't be banned outright — only a council majority can
+        // depose one. Officers ban regular members; guildmasters are protected.
+        const targetIsGm = await check({
+          user: `user:${target}`,
+          relation: "guildmaster",
+          object: GUILD,
+        });
+        if (targetIsGm) {
+          return Response.json({
+            ok: false,
+            message: `🛡️ ${
+              b.body || "A guildmaster"
+            } can't be banned — only a council majority can depose a guildmaster.`,
+          }, { status: 403 });
+        }
+        relation = "can_kick";
+        object = GUILD;
+        run = () => ({
+          message: `🚫 ${
+            b.body || "Member"
+          } banned — blocklisted, so every member perk is revoked. (demo — not persisted)`,
+        });
+        break;
+      }
+      case "vote": {
+        const target = b.target;
+        if (!target) {
+          return Response.json({ ok: false, message: "Bad request." }, {
+            status: 400,
+          });
+        }
+        // Only guildmasters of the council may vote on a deposition.
+        relation = "guildmaster";
+        object = GUILD;
+        run = () => {
+          const motion = `kick_motion:depose_${target}`;
+          addVote(motion, user);
+          const count = getVotes(motion).length;
+          return {
+            message: count >= MAJORITY
+              ? `🗳️ Vote cast — the motion carries (${count}/${GUILDMASTERS.length}). The deposition can now be carried out.`
+              : `🗳️ Vote cast (${count}/${GUILDMASTERS.length}). The council still needs a majority.`,
+          };
+        };
         break;
       }
       case "manageRanks": {

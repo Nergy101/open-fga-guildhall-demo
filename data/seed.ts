@@ -66,6 +66,8 @@ export const TUPLES: SeedTuple[] = [
   // ── Orgrimmar (allied guild) ─────────────────────────────────────────────
   // Every guild has at least one guildmaster — Medivh leads Orgrimmar.
   { user: "user:medivh", relation: "guildmaster", object: "guild:orgrimmar" },
+  // A lowly Orgrimmar recruit — Gamon, the city's favorite punching bag.
+  { user: "user:gamon", relation: "recruit", object: "guild:orgrimmar" },
 
   // ── Vault + tab ──────────────────────────────────────────────────────────
   {
@@ -197,6 +199,7 @@ export const TUPLES: SeedTuple[] = [
   { user: "user:rexxar", relation: "attendee", object: "raid:onyxia" },
   { user: "user:guldan", relation: "attendee", object: "raid:onyxia" },
   { user: "user:medivh", relation: "attendee", object: "raid:onyxia" },
+  { user: "user:gamon", relation: "attendee", object: "raid:onyxia" },
 
   // ── Channels ─────────────────────────────────────────────────────────────
   // The game's public tavern board — owned by the platform (not any guild),
@@ -219,6 +222,12 @@ export const TUPLES: SeedTuple[] = [
   {
     user: "guild:ironforge#member",
     relation: "poster",
+    object: "channel:general",
+  },
+  // Officers+ of Ironforge moderate General (the guild#officer userset).
+  {
+    user: "guild:ironforge#officer",
+    relation: "moderator",
     object: "channel:general",
   },
 
@@ -252,6 +261,12 @@ export const TUPLES: SeedTuple[] = [
     relation: "poster",
     object: "channel:pact_hall",
   },
+  // Only pact guildmasters (of either guild) moderate the shared halls.
+  {
+    user: "alliance:azeroth_pact#guildmaster",
+    relation: "moderator",
+    object: "channel:pact_hall",
+  },
   // Second shared channel: Pact General — any pact member may read AND post.
   {
     user: "guild:ironforge",
@@ -268,6 +283,11 @@ export const TUPLES: SeedTuple[] = [
     relation: "poster",
     object: "channel:pact_general",
   },
+  {
+    user: "alliance:azeroth_pact#guildmaster",
+    relation: "moderator",
+    object: "channel:pact_general",
+  },
   // Orgrimmar's own members-only board — Medivh can read his own guild's channel.
   {
     user: "guild:orgrimmar",
@@ -282,6 +302,12 @@ export const TUPLES: SeedTuple[] = [
   {
     user: "guild:orgrimmar#member",
     relation: "poster",
+    object: "channel:orgrimmar_hall",
+  },
+  // Orgrimmar's own board: only its guildmaster (Medivh) moderates.
+  {
+    user: "guild:orgrimmar#guildmaster",
+    relation: "moderator",
     object: "channel:orgrimmar_hall",
   },
 
@@ -302,4 +328,62 @@ export const TUPLES: SeedTuple[] = [
     object: "kick_motion:depose_magni",
   },
   { user: "user:thrall", relation: "vote", object: "kick_motion:depose_magni" },
+
+  // ── Items (player inventory) ─────────────────────────────────────────────
+  // OWNERSHIP + SOULBINDING + PUBLIC INSPECT. `owner` is the holder (a player,
+  // or every guild member for a shared heirloom). `bound` (user:*) makes an item
+  // soulbound — `can_trade` excludes it. `inspector` (user:*) makes it publicly
+  // inspectable (armory). Stack counts / stats are NOT here — that's game state.
+
+  // Thrall's soulbound legendary — public to inspect, his alone to wield.
+  { user: "user:thrall", relation: "owner", object: "item:ashkandi" },
+  { user: "user:*", relation: "bound", object: "item:ashkandi" },
+  { user: "user:*", relation: "inspector", object: "item:ashkandi" },
+
+  // Arthas' cursed runeblade.
+  { user: "user:arthas", relation: "owner", object: "item:frostmourne" },
+  { user: "user:*", relation: "bound", object: "item:frostmourne" },
+  { user: "user:*", relation: "inspector", object: "item:frostmourne" },
+
+  // Jaina's staff.
+  { user: "user:jaina", relation: "owner", object: "item:staff_antonidas" },
+  { user: "user:*", relation: "bound", object: "item:staff_antonidas" },
+  { user: "user:*", relation: "inspector", object: "item:staff_antonidas" },
+
+  // Shared guild heirloom: every Ironforge MEMBER owns a tabard — and the
+  // blocklist drops banned Gul'dan from it automatically (member userset).
+  { user: "guild:ironforge", relation: "guild", object: "item:guild_tabard" },
+  {
+    user: "guild:ironforge#member",
+    relation: "owner",
+    object: "item:guild_tabard",
+  },
+  { user: "user:*", relation: "bound", object: "item:guild_tabard" },
+  { user: "user:*", relation: "inspector", object: "item:guild_tabard" },
+
+  // Common consumable: members may use AND trade it; not publicly inspectable.
+  { user: "guild:ironforge", relation: "guild", object: "item:health_potion" },
+  {
+    user: "guild:ironforge#member",
+    relation: "owner",
+    object: "item:health_potion",
+  },
+
+  // Rexxar's private, tradeable starter weapon (no one else may even inspect it).
+  { user: "user:rexxar", relation: "owner", object: "item:rusty_hatchet" },
+
+  // Banned Gul'dan still owns his personal soulbound relic — ownership is
+  // independent of guild membership.
+  { user: "user:guldan", relation: "owner", object: "item:cursed_skull" },
+  { user: "user:*", relation: "bound", object: "item:cursed_skull" },
+
+  // Orgrimmar's banner — Medivh's, public to inspect, soulbound to him.
+  {
+    user: "guild:orgrimmar",
+    relation: "guild",
+    object: "item:warsong_banner",
+  },
+  { user: "user:medivh", relation: "owner", object: "item:warsong_banner" },
+  { user: "user:*", relation: "bound", object: "item:warsong_banner" },
+  { user: "user:*", relation: "inspector", object: "item:warsong_banner" },
 ];

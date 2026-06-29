@@ -116,18 +116,19 @@ export const handler = define.handlers({
 
 /** One message line — Discord groups consecutive posts by the same author. */
 function Message(
-  { m, cont, channel, canModerate }: {
+  { m, cont, channel, canModerate, isMe }: {
     m: MsgView;
     cont: boolean;
     channel: string;
     canModerate: boolean;
+    isMe: boolean;
   },
 ) {
   return (
     <div
-      class={`group relative flex gap-3 rounded px-2 hover:bg-slate-800/40 ${
+      class={`group relative flex gap-3 rounded border-l-2 px-2 hover:bg-slate-800/40 ${
         cont ? "py-0.5" : "mt-4 py-0.5"
-      }`}
+      } ${isMe ? "border-amber-400/70 bg-amber-400/5" : "border-transparent"}`}
     >
       <div class="w-10 shrink-0">
         {cont
@@ -137,7 +138,11 @@ function Message(
             </span>
           )
           : (
-            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700/70 text-xl">
+            <span
+              class={`flex h-10 w-10 items-center justify-center rounded-full bg-slate-700/70 text-xl ${
+                isMe ? "ring-2 ring-amber-400/70" : ""
+              }`}
+            >
               {m.emoji}
             </span>
           )}
@@ -146,6 +151,11 @@ function Message(
         {!cont && (
           <div class="flex items-baseline gap-2">
             <span class="text-sm font-semibold text-amber-100">{m.name}</span>
+            {isMe && (
+              <span class="rounded bg-amber-400/20 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-amber-200">
+                you
+              </span>
+            )}
             <span class="text-[10px] text-slate-500">{m.time}</span>
           </div>
         )}
@@ -173,6 +183,7 @@ export default define.page<typeof handler>(function Channels({ data, state }) {
   const active = scopes.flatMap((s) =>
     s.channels
   ).find((c) => c.object === activeObject) ?? null;
+  const me = state.forum!.persona;
 
   return (
     <ForumShell forum={state.forum!} active="channels" fill>
@@ -278,6 +289,7 @@ export default define.page<typeof handler>(function Channels({ data, state }) {
                           active.messages[i - 1].authorId === m.authorId}
                         channel={active.object}
                         canModerate={active.canModerate}
+                        isMe={m.authorId === me.id}
                       />
                     ))}
                   </div>
@@ -286,7 +298,19 @@ export default define.page<typeof handler>(function Channels({ data, state }) {
 
             <div class="shrink-0 px-4 pb-5">
               {active.canPost
-                ? <ForumComposer channel={active.object} name={active.slug} />
+                ? (
+                  <>
+                    <div class="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] text-slate-500">
+                      <span>Posting as</span>
+                      <span class="text-sm leading-none">{me.emoji}</span>
+                      <span class="font-semibold text-amber-200">
+                        {me.name}
+                      </span>
+                      <span class="text-slate-600">· {me.role}</span>
+                    </div>
+                    <ForumComposer channel={active.object} name={active.slug} />
+                  </>
+                )
                 : (
                   <div class="rounded-xl border border-slate-800 bg-slate-800/40 px-3 py-2.5 text-xs text-slate-500">
                     🔒 You can read{" "}

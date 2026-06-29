@@ -16,6 +16,28 @@ const MOTION = "kick_motion:depose_magni";
 const GM_COUNT = 3; // Thrall, Magni, Muradin
 const MAJORITY = Math.floor(GM_COUNT / 2) + 1; // 2 of 3
 
+/** One relationship tuple, styled by where it lives: the store, or the app's
+ * contextual tuples for this single check. */
+function Tuple(
+  { user, relation, object, kind }: {
+    user: string;
+    relation: string;
+    object: string;
+    kind: "stored" | "context";
+  },
+) {
+  const tone = kind === "stored"
+    ? "bg-slate-800/70 text-slate-300 ring-slate-700"
+    : "bg-amber-400/10 text-amber-200 ring-amber-400/40";
+  return (
+    <code
+      class={`block truncate rounded px-2 py-1 text-[11px] ring-1 ring-inset ${tone}`}
+    >
+      {`${user} · ${relation} · ${object}`}
+    </code>
+  );
+}
+
 export default function CouncilLab() {
   // Thrall's vote is seeded in the store; Muradin's is the toggle. Magni is the
   // target, so he doesn't vote.
@@ -115,14 +137,80 @@ export default function CouncilLab() {
         </span>
       </div>
 
+      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="rounded-lg border border-slate-700/70 bg-slate-900/40 p-3">
+          <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            📦 In the tuple store (seeded)
+          </div>
+          <div class="mt-2 space-y-1">
+            <Tuple
+              user="guild:ironforge"
+              relation="guild"
+              object={MOTION}
+              kind="stored"
+            />
+            <Tuple
+              user="user:magni"
+              relation="target"
+              object={MOTION}
+              kind="stored"
+            />
+            <Tuple
+              user="user:thrall"
+              relation="vote"
+              object={MOTION}
+              kind="stored"
+            />
+          </div>
+        </div>
+        <div class="rounded-lg border border-amber-400/30 bg-amber-400/5 p-3">
+          <div class="text-[11px] font-semibold uppercase tracking-wide text-amber-300/80">
+            ⚡ Sent by the app for this Check
+          </div>
+          <div class="mt-2 space-y-1">
+            {muradinVotes.value && (
+              <Tuple
+                user="user:muradin"
+                relation="vote"
+                object={MOTION}
+                kind="context"
+              />
+            )}
+            {passed && (
+              <Tuple
+                user="user:*"
+                relation="passed"
+                object={MOTION}
+                kind="context"
+              />
+            )}
+            {!muradinVotes.value && !passed && (
+              <p class="text-[11px] text-slate-500">
+                Nothing extra yet — this Check already runs on the store alone
+                (Thrall's lone vote), so it comes back denied: {votes} of{" "}
+                {GM_COUNT} is short of the{" "}
+                {MAJORITY}-vote majority. Cast Muradin's vote to add the tuple
+                that tips it.
+              </p>
+            )}
+          </div>
+          {passed && (
+            <p class="mt-2 text-[10px] text-amber-300/70">
+              App tallied {votes}/{GM_COUNT} ≥ {MAJORITY} → grants{" "}
+              <code>passed</code>.
+            </p>
+          )}
+        </div>
+      </div>
+
       <div class="mt-3 flex items-center justify-between gap-2 rounded-lg border border-slate-700/70 bg-slate-800/40 px-3 py-2">
         <div class="min-w-0">
           <div class="text-xs text-slate-200">
             OpenFGA gate — depose a guildmaster
           </div>
           <div class="text-[10px] text-slate-500">
-            <code>can_remove</code> on <code>{MOTION}</code> · requires{" "}
-            <code>passed</code>
+            <code>can_remove</code> on <code>{MOTION}</code> · needs{" "}
+            <code>passed</code> + a guildmaster who isn't the target
           </div>
         </div>
         <Badge allowed={removable} />
@@ -131,12 +219,14 @@ export default function CouncilLab() {
       <p class="mt-3 text-[11px] text-slate-500">
         OpenFGA can't{" "}
         <em>count</em>, so "a majority of guildmasters" can't live in the model.
-        The app tallies the <code>vote</code> tuples and writes{" "}
-        <code>passed</code> once a majority agrees; OpenFGA then enforces the
-        {" "}
-        <code>can_remove: passed</code>{" "}
-        gate. (Same split as the cooldown — the app supplies the state, OpenFGA
-        enforces the rule.)
+        The app tallies the <code>vote</code> tuples and writes a{" "}
+        <code>passed</code>{" "}
+        grant once a majority agrees. OpenFGA then enforces the gate:{" "}
+        <code>can_remove</code> needs <code>passed</code>{" "}
+        plus a guildmaster of the guild who isn't the target — so only{" "}
+        <em>another</em>{" "}
+        guildmaster can carry out a passed motion. (Same split as the cooldown:
+        the app supplies state, OpenFGA enforces the rule.)
       </p>
     </div>
   );

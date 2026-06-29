@@ -1,10 +1,11 @@
 import { page } from "fresh";
 import { define } from "@/utils.ts";
 import { batchCheck } from "@/lib/fga.ts";
-import { getMotd } from "@/lib/forumState.ts";
+import { getMotd, getVotes } from "@/lib/forumState.ts";
 import { ForumShell } from "@/components/ForumShell.tsx";
 import ForumActionButton from "@/islands/ForumActionButton.tsx";
 import MotdEditor from "@/islands/MotdEditor.tsx";
+import { GUILDMASTERS, MAJORITY, MOTION } from "@/lib/council.ts";
 
 const GUILD = "guild:ironforge";
 
@@ -34,7 +35,20 @@ export const handler = define.handlers({
       { id: "kick", user, relation: "can_kick", object: GUILD },
       { id: "ranks", user, relation: "can_manage_ranks", object: GUILD },
       { id: "disband", user, relation: "can_disband", object: GUILD },
+      { id: "gm", user, relation: "guildmaster", object: GUILD },
     ]);
+    const voters = getVotes(MOTION.id).map((v) => v.replace(/^user:/, ""));
+    const council = {
+      target: MOTION.target,
+      targetName: MOTION.targetName,
+      initiatorName: MOTION.initiatorName,
+      voters,
+      youVoted: voters.includes(forum.persona.id),
+      passed: voters.length >= MAJORITY,
+      majority: MAJORITY,
+      total: GUILDMASTERS.length,
+      isGuildmaster: c.gm,
+    };
     return page({
       member: c.read,
       canEditMotd: c.motd,
@@ -43,6 +57,7 @@ export const handler = define.handlers({
       canManageRanks: c.ranks,
       canDisband: c.disband,
       motd: getMotd(),
+      council,
     });
   },
 });
@@ -57,6 +72,7 @@ export default define.page<typeof handler>(function GuildHall({ data, state }) {
     canManageRanks,
     canDisband,
     motd,
+    council,
   } = data;
 
   if (!member) {
@@ -92,6 +108,71 @@ export default define.page<typeof handler>(function GuildHall({ data, state }) {
   return (
     <ForumShell forum={forum} active="home">
       <h1 class="text-xl font-bold text-amber-100">🏰 Ironforge Guild Hall</h1>
+
+      <section class="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="font-semibold text-rose-100">
+            🗳️ Council Motion — Depose {council.targetName}
+          </h2>
+          <span class="rounded-full bg-rose-500/15 px-2 py-0.5 text-[11px] font-semibold text-rose-200 ring-1 ring-inset ring-rose-400/40">
+            {council.voters.length}/{council.total} votes · needs{" "}
+            {council.majority}
+          </span>
+        </div>
+        <p class="mt-1 text-sm text-slate-300">
+          <span class="text-rose-200">{council.targetName}</span>{" "}
+          is being deposed by{" "}
+          <span class="text-amber-200">{council.initiatorName}</span>.{" "}
+          {council.passed
+            ? "The council has reached a majority — the motion carries."
+            : council.isGuildmaster
+            ? (council.youVoted
+              ? "Your vote is in. Waiting on the rest of the council…"
+              : `Cast your vote, ${forum.persona.name}.`)
+            : "Only the guild's council — its guildmasters — may vote."}
+        </p>
+        <div class="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+          <span>Voted so far:</span>
+          {council.voters.length === 0
+            ? <span class="text-slate-500">— none —</span>
+            : council.voters.map((v) => (
+              <span
+                key={v}
+                class="rounded bg-slate-800/70 px-1.5 py-0.5 text-slate-200"
+              >
+                👑 {v.charAt(0).toUpperCase() + v.slice(1)}
+              </span>
+            ))}
+        </div>
+        {council.isGuildmaster && (
+          <div class="mt-3">
+            {council.passed
+              ? (
+                <ForumActionButton
+                  kind="kick"
+                  payload={{ target: council.target, body: council.targetName }}
+                  label={`⚖️ Depose ${council.targetName}`}
+                  tone="danger"
+                  reload={false}
+                />
+              )
+              : council.youVoted
+              ? (
+                <span class="text-[11px] text-slate-500">
+                  One more guildmaster must agree to carry the motion.
+                </span>
+              )
+              : (
+                <ForumActionButton
+                  kind="vote"
+                  payload={{ target: council.target }}
+                  label="🗳️ Cast your vote"
+                  tone="primary"
+                />
+              )}
+          </div>
+        )}
+      </section>
 
       <section class="mt-4 rounded-xl border border-amber-500/20 bg-slate-900/40 p-4">
         <div class="text-[10px] font-semibold uppercase tracking-wide text-amber-300/80">
@@ -147,14 +228,26 @@ export default define.page<typeof handler>(function GuildHall({ data, state }) {
                       />
                     ))
                     : (canKick && (
-                      <ForumActionButton
-                        kind="kick"
-                        payload={{ target: m.id, body: m.name }}
-                        label="Kick"
-                        tone="danger"
-                        size="xs"
-                        reload={false}
-                      />
+                      <span class="flex gap-1.5">
+                        <ForumActionButton
+                          kind="kick"
+                          payload={{ target: m.id, body: m.name }}
+                          label="Kick"
+                          tone="danger"
+                          size="xs"
+                          reload={false}
+                        />
+                        {!banned && (
+                          <ForumActionButton
+                            kind="ban"
+                            payload={{ target: m.id, body: m.name }}
+                            label="🚫 Ban"
+                            tone="danger"
+                            size="xs"
+                            reload={false}
+                          />
+                        )}
+                      </span>
                     ))
                 )}
               </li>
@@ -167,7 +260,8 @@ export default define.page<typeof handler>(function GuildHall({ data, state }) {
             <span class="text-amber-200">majority of the council</span>{" "}
             must vote them out (OpenFGA enforces the <code>can_remove</code>
             {" "}
-            gate; the app tallies the votes). Try it — the server refuses.
+            gate; the app tallies the votes). Use the council motion at the top
+            to vote.
           </p>
         )}
       </section>

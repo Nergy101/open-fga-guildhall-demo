@@ -33,6 +33,7 @@ export default define.middleware(async (ctx) => {
       bank: r.vbank || r.vwar,
       raids: r.rmc || r.rbwl || r.rony,
       channels: r.ctav, // tavern board is public, so this is always reachable
+      inventory: true, // every persona has a backpack (and a public armory to inspect)
       officer: r.ranks || r.disband,
     },
   };

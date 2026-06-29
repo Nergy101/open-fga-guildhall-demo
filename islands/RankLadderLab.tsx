@@ -55,6 +55,15 @@ const LADDER: LadderAction[] = [
     context: { requested_amount: 50 },
   },
   {
+    id: "withdraw_cap",
+    label: "Withdraw 100g from vault",
+    object: "vault:ironforge_bank",
+    relation: "can_withdraw",
+    unlock: "recruit",
+    concept: "member: ≤100g cap (ABAC)",
+    context: { requested_amount: 100 },
+  },
+  {
     id: "invite",
     label: "Invite members",
     object: GUILD,
@@ -77,6 +86,15 @@ const LADDER: LadderAction[] = [
     relation: "can_read",
     unlock: "officer",
     concept: "group: guild#officer",
+  },
+  {
+    id: "withdraw_over",
+    label: "Withdraw 250g from vault",
+    object: "vault:ironforge_bank",
+    relation: "can_withdraw",
+    unlock: "officer",
+    concept: "over the 100g member cap → officers bypass it",
+    context: { requested_amount: 250 },
   },
   {
     id: "ranks",
